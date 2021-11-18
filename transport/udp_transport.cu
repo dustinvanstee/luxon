@@ -134,8 +134,6 @@ int UdpTransport::pop(Message** m, int numReqMsg, int& numRetMsg, eTransportDest
         rc = recvfrom(this->sockfd, &buffer, MSG_MAX_SIZE, 0, name, namelen);
 
         if (rc > 0) {
-            //cout << "received " << recvlen << " bytes " << "from " << inet_ntoa(from.sin_addr) << endl;
-            m[i] = createMessage();
             m[i]->seqNumber = i;
             m[i]->interval = 0;
             m[i]->bufferSize = rc;

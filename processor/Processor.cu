@@ -132,6 +132,12 @@ int Processor::procCountZerosCPU(int minMessageToProcess) {
     int sum = 0;
     int processedMessages = 0;
 
+    //Intitialize the receive buffer
+    for(int i = 0; i < MSG_BLOCK_SIZE; i++)
+    {
+        m[i] = transport->createMessage();
+    }
+
     while (processedMessages < minMessageToProcess) {
 
         if (0 != transport->pop(m, MSG_BLOCK_SIZE, msgCountReturned, eTransportDest::HOST)) {
@@ -148,6 +154,12 @@ int Processor::procCountZerosCPU(int minMessageToProcess) {
 
     }
 
+    //Free the receive buffer
+    for(int i = 0; i < MSG_BLOCK_SIZE; i++)
+    {
+        transport->freeMessage(m[i]);
+    }
+
     std::cout << "\nProcessing Completed: " << std::endl;
     std::cout << "\t processed " << processedMessages << " in " << t.seconds_elapsed() << " sec" << std::endl;
     std::cout << "\t total zero's in messages = " << sum << std::endl;
@@ -161,6 +173,13 @@ void Processor::procDropMsg(int minMessageToProcess) {
     int msgCountReturned = 0;
     int processedMessages = 0;
 
+    //Intitialize the receive buffer
+    for(int i = 0; i < MSG_BLOCK_SIZE; i++)
+    {
+        m[i] = transport->createMessage();
+    }
+
+    t.start();
     while (processedMessages < minMessageToProcess) {
 
         if (0 != transport->pop(m, MSG_BLOCK_SIZE, msgCountReturned, eTransportDest::HOST)) {
@@ -175,6 +194,13 @@ void Processor::procDropMsg(int minMessageToProcess) {
         msgCountReturned=0;
 
     }
+    t.stop();
+
+    //Free the receive buffer
+    for(int i = 0; i < MSG_BLOCK_SIZE; i++)
+    {
+        transport->freeMessage(m[i]);
+    }
 
     std::cout << "\nProcessing Completed: " << std::endl;
     std::cout << "\t processed " << processedMessages << " in " << t.seconds_elapsed() << " sec" << std::endl;
@@ -185,6 +211,12 @@ int Processor::procPrintMessages(int minMessageToProcess) {
     Message* m[MSG_BLOCK_SIZE];
     int processedCount = 0;
     int r = 0;
+
+    //Intitialize the receive buffer
+    for(int i = 0; i < MSG_BLOCK_SIZE; i++)
+    {
+        m[i] = transport->createMessage();
+    }
 
     do {
 
@@ -201,6 +233,12 @@ int Processor::procPrintMessages(int minMessageToProcess) {
             std::cout << std::endl;
         }
     } while (processedCount < minMessageToProcess);
+
+    //Free the receive buffer
+    for(int i = 0; i < MSG_BLOCK_SIZE; i++)
+    {
+        transport->freeMessage(m[i]);
+    }
 
     //Simple process (i.e. print)
     std::cout << "Processing Completed: found " << processedCount << " messages" << std::endl;
