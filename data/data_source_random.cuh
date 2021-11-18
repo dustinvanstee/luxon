@@ -7,7 +7,7 @@
 #include "../common.cuh"
 #include "../data/idataSource.cuh"
 
-#define RAND_BLOCK_SIZE 3800     //Size of the Data in a random block
+#define RAND_BLOCK_SIZE 1776     //Size of the Data in a random block
 #define RAND_BLOCK_COUNT 1024    //Number of Messages in the Flow
 
 struct Block {
