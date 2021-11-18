@@ -122,31 +122,32 @@ int UdpTransport::push(Message* m)
 */
 int UdpTransport::pop(Message** m, int numReqMsg, int& numRetMsg, eTransportDest dest)
 {
+    int rc;
+    sockaddr *name;
+    socklen_t *namelen;
     uint8_t buffer[MSG_MAX_SIZE];    // receive buffer
-    int recvlen;                         // num bytes received
-    //struct sockaddr_in from;             // Sender's address. TODO: Don't need these, just waste perf
-    //int fromlen;                         // Length of sender's address.
 
     DEBUG("waiting on socket " << this->n_localPort << endl);
 
     for(int i = 0; i < numReqMsg; i++)
     {
-        //recvlen = sockfd, buffer, MSG_MAX_SIZE);
-        recvlen = recv(this->sockfd, buffer, 1000, 0);
+        rc = recvfrom(this->sockfd, &buffer, MSG_MAX_SIZE, 0, name, namelen);
 
-        if (recvlen > 0) {
+        if (rc > 0) {
             //cout << "received " << recvlen << " bytes " << "from " << inet_ntoa(from.sin_addr) << endl;
             m[i] = createMessage();
             m[i]->seqNumber = i;
             m[i]->interval = 0;
-            m[i]->bufferSize = recvlen;
-            memcpy(buffer,m[i]->buffer,recvlen); //TODO: smarter way than a copy?
+            m[i]->bufferSize = rc;
+            memcpy(m[i]->buffer,buffer,rc); //TODO: smarter way than a copy?
             numRetMsg = numRetMsg + 1;
-        } else if(recvlen == -1) {
+        } else if(rc == -1) {
             cerr << "ERROR UdpTransport Pop - failed mcast socket read " << errno << endl;
             close(sockfd);
             exit(EXIT_FAILURE);
         }
+
+
     }
 
     return 0;

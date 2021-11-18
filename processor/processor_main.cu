@@ -17,7 +17,7 @@ void PrintUsage()
     cout << "usage: processorSim [-l local-addr] [-t trans] [-m mode] mcast-addr" << endl;
     cout << "\t mcast-addr - multicast group where sensor publishes data" << endl;
     cout << "\t[-l local-addr] - local ipv4 addresss to bind. (default: bind to first address)" << endl;
-    cout << "\t[-t trans] - transport to use: UDP, RDMA-UD, UCX (default: UDP)" << endl;
+    cout << "\t[-t trans] - transport to use: UDP, RDMA_UD (default: UDP)" << endl;
     cout << "\t[-m mode] - run mode: PRINT, NO-PROC, CPU-COUNT, GPU-COUNT (default: PRINT)" << endl;
 }
 
@@ -33,6 +33,9 @@ int main(int argc,char *argv[], char *envp[]) {
     char hostBuffer[256];
     string tmode = "UDP";
 
+    eTransportType transportType;
+    ITransport* transport;
+
     while ((op = getopt(argc, argv, "m:s:l:t:")) != -1) {
         switch (op) {
             case 'l':
@@ -47,12 +50,7 @@ int main(int argc,char *argv[], char *envp[]) {
                 }
                 break;
             case 't':
-                tmode = optarg;
-                if (tmode != "UDP" && tmode != "RDMA-UD")
-                {
-                    PrintUsage();
-                    return -1;
-                }
+                transportType = transport->strToTransportType(optarg);
                 break;
             default:
                 PrintUsage();
@@ -71,7 +69,6 @@ int main(int argc,char *argv[], char *envp[]) {
     }
 
     gethostname(hostBuffer, sizeof(hostBuffer));
-
     cout << "********  ********  ********  ********  ********  ********" << endl;
     cout << "Processor Simulator - Receive Messages from a sensor and process them" << endl;
     cout << "********  ********  ********  ********  ********  ********" << endl;
@@ -83,13 +80,20 @@ int main(int argc,char *argv[], char *envp[]) {
 
 
     //Create the Transport
-    ITransport* t;
-    if(tmode == "UDP")
-        t = new UdpTransport(localAddr, mcastAddr, eTransportRole::PROCESSOR);
-    else if(tmode == "RDMA-UD")
-        t = new RdmaUdTransport(localAddr , mcastAddr, eTransportRole::PROCESSOR);
+    switch(transportType) {
+        case eTransportType::UDP :
+            transport = new UdpTransport(localAddr, mcastAddr, eTransportRole::PROCESSOR);
+            break;
+        case eTransportType::RDMA_UD :
+            transport = new RdmaUdTransport(localAddr , mcastAddr, eTransportRole::PROCESSOR);
+            break;
+        default :
+            cout << "No or Invalid Transport Specified" << endl;
+            PrintUsage();
+            return -1;
+    }
 
-    Processor p = Processor(t);
+    Processor p = Processor(transport);
 
     if(mode == "PRINT")
     {

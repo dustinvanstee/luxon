@@ -7,16 +7,16 @@ transport: none_transport print_transport udp_transport rdma_ud_transport
 	ar ru lib/libtransport.a lib/none_transport.o lib/print_transport.o lib/udp_transport.o lib/rdma_ud_transport.o
 
 none_transport: transport/udp_transport.cu
-	$(CXXCUDA) -c -o lib/none_transport.o transport/none_transport.cu
+	$(CXXCUDA) -c -g -o lib/none_transport.o transport/none_transport.cu
 
 print_transport: transport/udp_transport.cu
-	$(CXXCUDA) -c -o lib/print_transport.o transport/print_transport.cu
+	$(CXXCUDA) -c -g -o lib/print_transport.o transport/print_transport.cu
 
 udp_transport: transport/udp_transport.cu
-	$(CXXCUDA) -c -o lib/udp_transport.o transport/udp_transport.cu
+	$(CXXCUDA) -c -g -o lib/udp_transport.o transport/udp_transport.cu
 
 rdma_ud_transport: transport/rdma_ud_transport.cu
-	$(CXXCUDA) -c -o lib/rdma_ud_transport.o transport/rdma_ud_transport.cu
+	$(CXXCUDA) -c -g -o lib/rdma_ud_transport.o transport/rdma_ud_transport.cu
 
 
 processor-debug: transport processor/processor_main.cu processor/Processor.cu

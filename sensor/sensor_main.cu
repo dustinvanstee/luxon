@@ -18,7 +18,7 @@ void PrintUsage()
     cout << "usage: sensorSim [ -s pcap ] [-t mode] [-l local-addr] [-d duration] mcast-addr" << endl;
     cout << "\t multicast group where sensor publishes data" << endl;
     cout << "\t[-s source] - a data source, can be PCAP, RANDOM, FINANCE (default: random byte pattern)" << endl;
-    cout << "\t[-t transport mode] - transport mode, PRINT, UDP, RDMA-UD, NONE (default: PRINT)" << endl;
+    cout << "\t[-t transport mode] - transport mode, PRINT, UDP, RDMA_UD, NONE (default: PRINT)" << endl;
     cout << "\t[-i iterations] - iterations to send the flow. (default: 1 sec)" << endl;
     cout << "\t[-l ip-addr] - local ip addresss to bind. (default: bind to first address)" << endl;
 }
@@ -122,7 +122,6 @@ int main(int argc,char *argv[], char *envp[]) {
     cout << "sending flow for " << numIter << " iterations" << endl;
 
     long long sentMessages = 0;
-    long long messageRate = 0;
     int flowLength = s.getFlowMsgCount();
 
     timer t_runTime;
