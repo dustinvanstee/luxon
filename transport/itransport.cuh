@@ -27,7 +27,7 @@ public:
     /*
      * Interface Methods
      */
-    virtual int push(Message* msg) = 0;
+    virtual int push(Message** m, int count) = 0;
     virtual int pop(Message** m, int numReqMsg, int& numRetMsg, eTransportDest dest ) = 0;
 
     virtual Message* createMessage() = 0;

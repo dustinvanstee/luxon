@@ -7,8 +7,8 @@
 #include "../common.cuh"
 #include "../data/idataSource.cuh"
 
-#define RAND_BLOCK_SIZE 1776     //Size of the Data in a random block
-#define RAND_BLOCK_COUNT 1024    //Number of Messages in the Flow
+#define RAND_BLOCK_SIZE MSG_MAX_SIZE     //Size of the Data in a random block
+#define RAND_BLOCK_COUNT 100    //Number of Messages in this data source, just want enough entropy to be interesting.
 
 struct Block {
     char buffer[RAND_BLOCK_SIZE];
@@ -25,7 +25,8 @@ public:
             block_t b;
             b.bufferSize = RAND_BLOCK_SIZE;
             for (int j = 0; j < RAND_BLOCK_SIZE; ++j) {
-                int r = (uint8_t)((rand() % 256) + 1);
+                //int r = (uint8_t)((rand() % 256) + 1);
+                int r = 0xAB;
                 b.buffer[j] = r;
             }
             randomBlocks.push_back(b);

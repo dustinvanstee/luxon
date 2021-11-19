@@ -26,4 +26,4 @@ sensor-debug: transport sensor/sensor_main.cu sensor/Sensor.cu
 	$(CXXCUDA) -g -o bin/sensor-debug.out sensor/sensor_main.cu sensor/Sensor.cu lib/libtransport.a $(LIBS)
 
 clean:
-	rm bin/*
+	rm -f bin/* lib/*

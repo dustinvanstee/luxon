@@ -9,7 +9,7 @@ NoneTransport::NoneTransport()
     this->transportType = eTransportType::NONE;
 }
 
-int NoneTransport::push(Message* m)
+int NoneTransport::push(Message** m, int count)
 {
     return 0;
 }

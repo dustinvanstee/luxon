@@ -17,7 +17,7 @@ public:
     NoneTransport();
 
 private:
-    int push(Message* msg);
+    int push(Message** msg, int count);
     int pop(Message** msg, int numReqMsg, int& numRetMsg, eTransportDest dest);
     Message* createMessage();
     int freeMessage(Message* msg);

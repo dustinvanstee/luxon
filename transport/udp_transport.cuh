@@ -21,7 +21,7 @@ public:
     UdpTransport(string localAddr, string mcastAddr, eTransportRole role);
 
 private:
-    int push(Message* msg);
+    int push(Message** msg, int count);
     int pop(Message** msg, int numReqMsg, int& numRetMsg, eTransportDest dest);
     Message* createMessage();
     int freeMessage(Message* msg);

@@ -1,9 +1,5 @@
-//
-// Created by alex on 7/27/20.
-//
-
-#ifndef SENSORSIM_COMMON_CUH
-#define SENSORSIM_COMMON_CUH
+#ifndef LUXON_COMMON_CUH
+#define LUXON_COMMON_CUH
 
 #include <iostream>
 #include <chrono>
@@ -20,8 +16,8 @@
 
 #define PRINT_UPDATE_DELAY 1    //Used with timer
 
-#define MSG_MAX_SIZE 3800       //Max size of a message must be > RAND_FLOW_MSG_SIZE or max size message from pcap
-#define MSG_BLOCK_SIZE 1024     //Number of messages to process in parallel
+#define MSG_MAX_SIZE 2000       //Max size of a message must be > RAND_FLOW_MSG_SIZE or max size message from pcap
+#define MSG_BLOCK_SIZE 10     //Number of messages to process in parallel
 
 class timer
 {
@@ -55,4 +51,4 @@ private:
 };
 
 
-#endif //SENSORSIM_COMMON_CUH
+#endif //LUXON_COMMON_CUH

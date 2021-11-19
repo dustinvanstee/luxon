@@ -106,10 +106,10 @@ int main(int argc,char *argv[], char *envp[]) {
             s.createPCAPFlow(fileName);
             break;
         case eDataSourceType::RANDOM:
-            s.createRandomFlow(100);
+            s.createRandomFlow(MSG_BLOCK_SIZE);
             break;
         case eDataSourceType::FINANCE:
-            s.createFinanceFlow(100);
+            s.createFinanceFlow(MSG_BLOCK_SIZE);
             break;
         default :
             cout << "No valid data source" << endl;
@@ -135,11 +135,11 @@ int main(int argc,char *argv[], char *envp[]) {
             return -1;
         }
         sentMessages += flowLength;
-    } while (i++ <= numIter);
+    } while (++i < numIter);
     t_runTime.stop();
     cerr << "\rSent " << sentMessages << " messages\t Time: " << t_runTime.seconds_elapsed() << "/" << t_runTime.usec_elapsed() << "msec"  << endl;
 
-    cerr << "Rate " << (sentMessages/t_runTime.usec_elapsed()) * 1000 << "Messages Per Second" << endl;
+    cerr << "Rate " << (sentMessages/t_runTime.usec_elapsed()) * 1000 << " Messages Per Second" << endl;
 
 
     return 0;

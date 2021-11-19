@@ -26,7 +26,8 @@ public:
     ~RdmaUdTransport();
 
 private:
-    int         push(Message* msg);
+    int         push(Message* m);
+    int         push(Message** msg, int count);
     int         pop(Message** msg, int numReqMsg, int& numRetMsg, eTransportDest dest);
     Message*    createMessage();
     int         freeMessage(Message* msg);
@@ -51,13 +52,12 @@ private:
     bool                        messagePoolSlotFree[MSG_BLOCK_SIZE];  //Track which slots in the message pool is available.
     ibv_mr*                     mr_messagePool;
 
-    ibv_send_wr                 dataSendWqe;
+    ibv_send_wr                 dataSendWqe[MSG_BLOCK_SIZE];
     ibv_recv_wr                 dataRcvWqe;
-    ibv_wc                      dataWc;
-
+    struct ibv_wc               wc[MSG_BLOCK_SIZE];
 
     int         initSendWqe(ibv_send_wr*, int);
-    int         updateSendWqe(ibv_send_wr* wqe, void *buffer, size_t bufferlen, ibv_mr *bufferMemoryRegion);
+    int         updateSendWqe(ibv_send_wr* wqe, void *buffer, size_t bufferlen, int id, ibv_mr *bufferMemoryRegion);
 
     int         initRecvWqe(ibv_recv_wr *wqe, int);
     int         updateRecvWqe(ibv_recv_wr* wqe, void *buffer, size_t bufferlen, ibv_mr *bufferMemoryRegion);
