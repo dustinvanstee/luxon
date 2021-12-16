@@ -120,7 +120,7 @@ int UdpTransport::push(Message* m)
 /*
 *  Pulls a message from the transport and places it in the buffer
 */
-int UdpTransport::pop(Message** m, int numReqMsg, int& numRetMsg, eTransportDest dest)
+int UdpTransport::pop(Message* msgBlk, int numReqMsg, int& numRetMsg)
 {
     int rc;
     sockaddr *name = NULL;
@@ -134,10 +134,10 @@ int UdpTransport::pop(Message** m, int numReqMsg, int& numRetMsg, eTransportDest
         rc = recvfrom(this->sockfd, &buffer, MSG_MAX_SIZE, 0, name, namelen);
 
         if (rc > 0) {
-            m[i]->seqNumber = i;
-            m[i]->interval = 0;
-            m[i]->bufferSize = rc;
-            memcpy(m[i]->buffer,buffer,rc); //TODO: smarter way than a copy?
+            msgBlk[i].seqNumber = i;
+            msgBlk[i].interval = 0;
+            msgBlk[i].bufferSize = rc;
+            memcpy(msgBlk[i].buffer,buffer,rc); //TODO: smarter way than a copy?
             numRetMsg = numRetMsg + 1;
         } else if(rc == -1) {
             cerr << "ERROR UdpTransport Pop - failed mcast socket read " << errno << endl;
@@ -149,13 +149,6 @@ int UdpTransport::pop(Message** m, int numReqMsg, int& numRetMsg, eTransportDest
     }
 
     return 0;
-}
-
-Message* UdpTransport::createMessage() {
-    Message* m = NULL;
-    std::size_t t = sizeof(Message);
-    m = static_cast<Message*>(malloc(t));
-    return m;
 }
 
 int UdpTransport::freeMessage(Message* m)

@@ -129,7 +129,9 @@ int RdmaUdTransport::push(Message* m)
 /*
 *  Pulls messages from the transport and places it in the message block  buffer
 */
-int RdmaUdTransport::pop(Message** m, int numReqMsg, int& numRetMsg, eTransportDest dest)
+
+// TODO : 121621 broke this due to code refactor for gpudirect
+int RdmaUdTransport::pop(Message* m, int numReqMsg, int& numRetMsg)
 {
     numRetMsg = 0;
     Message* msg;
@@ -161,7 +163,7 @@ int RdmaUdTransport::pop(Message** m, int numReqMsg, int& numRetMsg, eTransportD
         msg->bufferSize = dataWc.byte_len - 40;
         msg->seqNumber = numRetMsg-1;
         msg->interval = 0;
-        m[numRetMsg-1] = msg;
+        //m[numRetMsg-1] = msg;
 
         DEBUG ("DEBUG: Received Message:\n");
         #ifdef DEBUG_BUILD
@@ -504,6 +506,7 @@ void RdmaUdTransport::DestroyQP()
 
 }
 
+/*
 Message* RdmaUdTransport::createMessage() {
     Message * m = NULL;
 
@@ -522,7 +525,7 @@ Message* RdmaUdTransport::createMessage() {
 
     return NULL; //We went through the whole Memory Pool and didn't find an open slot.
 }
-
+*/
 int RdmaUdTransport::freeMessage(Message* m)
 {
     //TODO: need to find and free this slot in the memory pool.

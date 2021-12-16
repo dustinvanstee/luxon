@@ -41,11 +41,15 @@ int Sensor::createPCAPFlow(std::string fileName)
     }
 
     //Create the Flow, allocated the memory
-    Message* m;
+    Message* msgBlk;
+    if(!transport->createMessageBlock(msgBlk, eTransportDest::HOST)){
+        return -1;
+    }
 
     //double lastMsgSec = 0, deltaSec = 0;
     double lastMsgUsec = 0, deltaUSec = 0;
     int i = 0;
+    // TODO : add checker PCAP > msg_blk_size
     while (int returnValue = pcap_next_ex(handle, &header, &data) >= 0) {
 
         // Set the size of the Message in bytes
@@ -57,17 +61,17 @@ int Sensor::createPCAPFlow(std::string fileName)
         //deltaSec = (header->ts.tv_sec) - lastMsgSec; //TODO: Calculating Message interval factor in > 1 Second delays
         deltaUSec = (header->ts.tv_usec) - lastMsgUsec;
 
-        m = transport->createMessage();
-        m->seqNumber = i++;
-        m->interval = deltaUSec;
-        m->bufferSize = header->caplen;
-        memcpy(m->buffer, data, header->caplen);
+        msgBlk[i].seqNumber = i;
+        msgBlk[i].interval = deltaUSec;
+        msgBlk[i].bufferSize = header->caplen;
+        memcpy(msgBlk[i].buffer, data, header->caplen);
 
         std::cout << "Adding to flow: ";
-        transport->printMessage(m, 0);
+        transport->printMessage(&msgBlk[i], 0);
         std::cout << std::endl;
 
-        flow.push_back(m);
+        flow.push_back(&msgBlk[i]);
+        i++;
     }
 
     return 0;
@@ -82,16 +86,17 @@ int Sensor::createRandomFlow(int numMsg) {
 
     std::vector<block_t> updates = rd->createRandomUpdate(numMsg);
 
+    Message *msgBlk;
+    transport->createMessageBlock(msgBlk, eTransportDest::HOST);
+
     int i = 0;
     for (auto &block_t : updates)
     {
-        Message* m = NULL;
-        m = transport->createMessage();
-        m->seqNumber = i;
-        m->interval = 100;
-        m->bufferSize = sizeof(block_t);
-        memcpy(&m->buffer, &block_t, sizeof(block_t));
-        flow.push_back(m);
+        msgBlk[i].seqNumber = i;
+        msgBlk[i].interval = 100;
+        msgBlk[i].bufferSize = sizeof(block_t);
+        memcpy(&msgBlk[i].buffer, &block_t, sizeof(block_t));
+        flow.push_back(&msgBlk[i]);
         i++;
     }
 
@@ -105,17 +110,17 @@ int Sensor::createFinanceFlow(int numMsg) {
     MarketData* md = (MarketData *) dataSource;
 
     std::vector<instrument> updates = md->createRandomUpdate(numMsg);
+    Message *msgBlk;
+    transport->createMessageBlock(msgBlk, eTransportDest::HOST);
 
     int i = 0;
     for (auto &instrument : updates)
     {
-        Message* m = NULL;
-        m = transport->createMessage();
-        m->seqNumber = i;
-        m->interval = 100;
-        m->bufferSize = sizeof(instrument);
-        memcpy(&m->buffer, &instrument, sizeof(instrument));
-        flow.push_back(m);
+        msgBlk[i].seqNumber = i;
+        msgBlk[i].interval = 100;
+        msgBlk[i].bufferSize = sizeof(instrument);
+        memcpy(&msgBlk[i].buffer, &instrument, sizeof(instrument));
+        flow.push_back(&msgBlk[i]);
         i++;
     }
 

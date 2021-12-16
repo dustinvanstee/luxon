@@ -17,30 +17,10 @@ int PrintTransport::push(Message* m)
     return 0;
 }
 
-int PrintTransport::pop(Message** m, int numReqMsg, int& numRetMsg, eTransportDest dest)
+int PrintTransport::pop(Message* msgBlk, int numReqMsg, int& numRetMsg)
 {
-    int recvlen;                        // num bytes received
-
-    for(int i = 0; i < numReqMsg; i++) {
-        recvlen = MSG_MAX_SIZE;
-
-        if (recvlen > 0) {
-            m[i] = createMessage();
-            m[i]->seqNumber = i;
-            m[i]->interval = 0;
-            m[i]->bufferSize = recvlen;
-            memset(&m[i]->buffer, PATTERN, MSG_MAX_SIZE);
-            numRetMsg = numRetMsg + 1;
-        }
-    }
-
+    numRetMsg = numReqMsg;
     return 0;
-}
-
-Message* PrintTransport::createMessage() {
-    std::size_t t = sizeof(Message);
-    auto* m = static_cast<Message*>(malloc(t));
-    return m;
 }
 
 int PrintTransport::freeMessage(Message* m)

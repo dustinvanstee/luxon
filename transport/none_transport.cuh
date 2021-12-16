@@ -17,10 +17,10 @@ public:
     NoneTransport();
 
 private:
-    int push(Message* msg);
-    int pop(Message** msg, int numReqMsg, int& numRetMsg, eTransportDest dest);
-    Message* createMessage();
-    int freeMessage(Message* msg);
+    int push(Message* msgBlk);
+    int pop(Message* msgBlk, int numReqMsg, int& numRetMsg);
+    int freeMessage(Message* msgBlk);
+
 };
 
 

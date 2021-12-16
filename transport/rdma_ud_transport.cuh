@@ -26,10 +26,10 @@ public:
     ~RdmaUdTransport();
 
 private:
-    int         push(Message* msg);
-    int         pop(Message** msg, int numReqMsg, int& numRetMsg, eTransportDest dest);
-    Message*    createMessage();
-    int         freeMessage(Message* msg);
+    int         push(Message* msgBlk);
+    int         pop(Message* msgBlk, int numReqMsg, int& numRetMsg);
+    //Message*    createMessage();
+    int         freeMessage(Message* msgBlk);
     int         freeMsgBlock();
 
     struct rdma_event_channel*  g_CMEventChannel;

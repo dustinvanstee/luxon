@@ -27,11 +27,10 @@ public:
     /*
      * Interface Methods
      */
-    virtual int push(Message* msg) = 0;
-    virtual int pop(Message** m, int numReqMsg, int& numRetMsg, eTransportDest dest ) = 0;
+    virtual int push(Message* msgBlk) = 0;
+    virtual int pop(Message* msgBlk, int numReqMsg, int& numRetMsg) = 0;
+    virtual int freeMessage(Message* msgBlk) = 0;
 
-    virtual Message* createMessage() = 0;
-    virtual int freeMessage(Message* msg) = 0;
 
     /*
     * Interface Statics
@@ -93,7 +92,17 @@ public:
     std::string printType() {
        return this->TransportTypeToStr(this->transportType);
     }
-
+    
+    int createMessageBlock(Message* msgBlk, eTransportDest dest) { 
+        std::size_t msgSize = sizeof(Message);
+        if(dest == eTransportDest::HOST){
+            msgBlk = static_cast<Message*>(malloc( msgSize*MSG_BLOCK_SIZE));
+        } else {
+            //TODO : add code for device selection
+            CUDA_CHECK( cudaMallocManaged((void **)&msgBlk, msgSize*MSG_BLOCK_SIZE));
+        }
+     return 0;
+    }
 protected:
     //All Transports will use basic IPoX as a control plane to establish a connection.
     std::string                 s_mcastAddr;

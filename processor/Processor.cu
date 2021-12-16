@@ -13,16 +13,16 @@ inline cudaError_t checkCuda(cudaError_t result)
     return result;
 }
 
-__global__ void gpu_count_zeros(Message** flow, int* sum, int flowLength)
+__global__ void gpu_count_zeros(Message* flow, int* sum, int flowLength)
 {
     int indx = blockDim.x * blockIdx.x + threadIdx.x;
     int stride = blockDim.x * gridDim.x;
 
     for(int i = indx; i < flowLength; i += stride)
     {
-        for(int j = 0; j < flow[i]->bufferSize; j++)
+        for(int j = 0; j < flow[i].bufferSize; j++)
         {
-            if(flow[i]->buffer[j] == 0)
+            if(flow[i].buffer[j] == 0)
             {
                 sum[i] += 1;
                 //cout << "found a zero at msg[" << i << "] byte[" << j << "]" << endl;
@@ -32,13 +32,13 @@ __global__ void gpu_count_zeros(Message** flow, int* sum, int flowLength)
 }
 
 
-void cpu_count_zeros(Message** flow, int& sum, int flowLength)
+void cpu_count_zeros(Message* flow, int& sum, int flowLength)
 {
     for(int i = 0; i < flowLength; i++)
     {
-        for(int j = 0; j < flow[i]->bufferSize; j++)
+        for(int j = 0; j < flow[i].bufferSize; j++)
         {
-            if(flow[i]->buffer[j] == 0)
+            if(flow[i].buffer[j] == 0)
             {
                 sum += 1;
                 //cout << "found a zero at msg[" << i << "] byte[" << j << "]" << endl;
@@ -71,12 +71,10 @@ void Processor::procCountZerosGPU(int minMessageToProcess) {
     int processedMessages = 0;
     int sum =0;
 
-    Message* m[MSG_BLOCK_SIZE];//Create array that is max message block size
-    uint8_t * d; //The data we will store.
-    size_t msgBlockSize = MSG_BLOCK_SIZE * sizeof(Message);
-    size_t msgDataSize = MSG_MAX_SIZE * MSG_BLOCK_SIZE;
-    checkCuda( cudaMallocManaged(m, msgBlockSize));
-    checkCuda( cudaMallocManaged(&d, msgDataSize));
+    Message* msgBlk;//Create array that is max message block size
+    if(!transport->createMessageBlock(msgBlk, eTransportDest::DEVICE)){
+        // print error messge
+    }
 
     int* blockSum;   //Array with sum of zeros for this message
     size_t sumArraySize = MSG_BLOCK_SIZE * sizeof(int);
@@ -85,16 +83,16 @@ void Processor::procCountZerosGPU(int minMessageToProcess) {
 
     while (processedMessages < minMessageToProcess) {
 
-        if (0 != transport->pop(m, MSG_BLOCK_SIZE, msgCountReturned, eTransportDest::DEVICE)) {
+        if (0 != transport->pop(msgBlk, MSG_BLOCK_SIZE, msgCountReturned)) {
             exit(EXIT_FAILURE);
         }
 
-        cudaMemPrefetchAsync(m, msgBlockSize, deviceId);
+        cudaMemPrefetchAsync(msgBlk, MSG_BLOCK_SIZE*sizeof(Message), deviceId);
 
         if(msgCountReturned > 0) //If there are new messages process them
         {
             std::cerr << "\rProcessed " << processedMessages << " messages";
-            gpu_count_zeros <<< threadsPerBlock, numberOfBlocks >>>(m, blockSum, msgCountReturned);
+            gpu_count_zeros <<< numberOfBlocks, threadsPerBlock >>>(msgBlk, blockSum, msgCountReturned);
 
             checkCuda( cudaGetLastError() );
             checkCuda( cudaDeviceSynchronize() ); //Wait for GPU threads to complete
@@ -114,7 +112,7 @@ void Processor::procCountZerosGPU(int minMessageToProcess) {
 
     }
 
-    checkCuda( cudaFree(m));
+    checkCuda( cudaFree(msgBlk));
     checkCuda( cudaFree(blockSum));
 
     std::cout << "\n Processing Completed: " << std::endl;
@@ -127,27 +125,26 @@ void Processor::procCountZerosGPU(int minMessageToProcess) {
 int Processor::procCountZerosCPU(int minMessageToProcess) {
     timer t;
 
-    Message* m[MSG_BLOCK_SIZE];
     int msgCountReturned = 0;
     int sum = 0;
     int processedMessages = 0;
 
     //Intitialize the receive buffer
-    for(int i = 0; i < MSG_BLOCK_SIZE; i++)
-    {
-        m[i] = transport->createMessage();
+    Message* msgBlk;//Create array that is max message block size
+    if(!transport->createMessageBlock(msgBlk, eTransportDest::HOST)){
+        // print error messge
     }
 
     while (processedMessages < minMessageToProcess) {
 
-        if (0 != transport->pop(m, MSG_BLOCK_SIZE, msgCountReturned, eTransportDest::HOST)) {
+        if (0 != transport->pop(msgBlk, MSG_BLOCK_SIZE, msgCountReturned)) {
             exit(EXIT_FAILURE);
         }
 
         if(msgCountReturned > 0) //If there are new messages process them
         {
             std::cerr << "\rProcessed " << processedMessages << " messages";
-            cpu_count_zeros(m, sum, msgCountReturned);
+            cpu_count_zeros(msgBlk, sum, msgCountReturned);
             processedMessages += msgCountReturned;
         }
         msgCountReturned=0;
@@ -157,7 +154,7 @@ int Processor::procCountZerosCPU(int minMessageToProcess) {
     //Free the receive buffer
     for(int i = 0; i < MSG_BLOCK_SIZE; i++)
     {
-        transport->freeMessage(m[i]);
+        transport->freeMessage(&msgBlk[i]);
     }
 
     std::cout << "\nProcessing Completed: " << std::endl;
@@ -169,20 +166,18 @@ int Processor::procCountZerosCPU(int minMessageToProcess) {
 void Processor::procDropMsg(int minMessageToProcess) {
     timer t;
 
-    Message* m[MSG_BLOCK_SIZE];
+    Message* msgBlk;
+    if(!transport->createMessageBlock(msgBlk, eTransportDest::HOST)){
+        exit(EXIT_FAILURE);
+    }
+
     int msgCountReturned = 0;
     int processedMessages = 0;
-
-    //Intitialize the receive buffer
-    for(int i = 0; i < MSG_BLOCK_SIZE; i++)
-    {
-        m[i] = transport->createMessage();
-    }
 
     t.start();
     while (processedMessages < minMessageToProcess) {
 
-        if (0 != transport->pop(m, MSG_BLOCK_SIZE, msgCountReturned, eTransportDest::HOST)) {
+        if (0 != transport->pop(msgBlk, MSG_BLOCK_SIZE, msgCountReturned)) {
             exit(EXIT_FAILURE);
         }
 
@@ -199,7 +194,7 @@ void Processor::procDropMsg(int minMessageToProcess) {
     //Free the receive buffer
     for(int i = 0; i < MSG_BLOCK_SIZE; i++)
     {
-        transport->freeMessage(m[i]);
+        transport->freeMessage(&msgBlk[i]);
     }
 
     std::cout << "\nProcessing Completed: " << std::endl;
@@ -208,28 +203,26 @@ void Processor::procDropMsg(int minMessageToProcess) {
 }
 
 int Processor::procPrintMessages(int minMessageToProcess) {
-    Message* m[MSG_BLOCK_SIZE];
-    int processedCount = 0;
-    int r = 0;
-
-    //Intitialize the receive buffer
-    for(int i = 0; i < MSG_BLOCK_SIZE; i++)
-    {
-        m[i] = transport->createMessage();
+    Message* msgBlk;
+    if(!transport->createMessageBlock(msgBlk, eTransportDest::HOST)){
+        exit(EXIT_FAILURE);
     }
+    
+    int processedCount = 0;
+    int messagesReturned = 0;
 
     do {
 
-        if (0 != transport->pop(m, MSG_BLOCK_SIZE, r, eTransportDest::HOST)) {
+        if (0 != transport->pop(msgBlk, MSG_BLOCK_SIZE, messagesReturned)) {
             exit(EXIT_FAILURE);
         }
 
-        processedCount += r;
+        processedCount += messagesReturned;
 
-        std::cout << "Printing first bytes of " << min(r,minMessageToProcess) << " messages" << std::endl;
-        for(int i = 0; i<min(r,minMessageToProcess); i++)
+        std::cout << "Printing first bytes of " << min(messagesReturned,minMessageToProcess) << " messages" << std::endl;
+        for(int i = 0; i<min(messagesReturned,minMessageToProcess); i++)
         {
-            transport->printMessage(m[i], 32);
+            transport->printMessage(&msgBlk[i], 32);
             std::cout << std::endl;
         }
     } while (processedCount < minMessageToProcess);
@@ -237,7 +230,7 @@ int Processor::procPrintMessages(int minMessageToProcess) {
     //Free the receive buffer
     for(int i = 0; i < MSG_BLOCK_SIZE; i++)
     {
-        transport->freeMessage(m[i]);
+        transport->freeMessage(&msgBlk[i]);
     }
 
     //Simple process (i.e. print)

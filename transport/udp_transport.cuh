@@ -21,10 +21,10 @@ public:
     UdpTransport(string localAddr, string mcastAddr, eTransportRole role);
 
 private:
-    int push(Message* msg);
-    int pop(Message** msg, int numReqMsg, int& numRetMsg, eTransportDest dest);
-    Message* createMessage();
-    int freeMessage(Message* msg);
+    int push(Message* msgBlk);
+    int pop(Message* msgBlk, int numReqMsg, int& numRetMsg);
+    int createMessageBlock(Message* msgBlk, eTransportDest dest);
+    int freeMessage(Message* msgBlk);
 
     struct ip_mreq        mcastGroup;
 
