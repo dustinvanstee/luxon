@@ -123,8 +123,8 @@ int UdpTransport::push(Message* m)
 int UdpTransport::pop(Message** m, int numReqMsg, int& numRetMsg, eTransportDest dest)
 {
     int rc;
-    sockaddr *name;
-    socklen_t *namelen;
+    sockaddr *name = NULL;
+    socklen_t *namelen = NULL;
     uint8_t buffer[MSG_MAX_SIZE];    // receive buffer
 
     DEBUG("waiting on socket " << this->n_localPort << endl);
