@@ -3,6 +3,8 @@
 
 #include <netinet/in.h>
 
+#define PATTERN 0xFEED
+
 enum class eMsgBlkLocation {HOST, DEVICE};
 enum class eTransportType {UDP, RDMA_UD, PRINT, NONE, UNKNOWN};
 enum class eTransportRole {SENSOR, PROCESSOR};
@@ -26,13 +28,20 @@ public:
     virtual int push(Message* msgBlk) = 0;
     virtual int pop(Message* msgBlk, int numReqMsg, int& numRetMsg) = 0;
 
-    int createMessageBlock(Message* msgBlk, eMsgBlkLocation dest) {
+    int createMessageBlock(Message* &msgBlk, eMsgBlkLocation dest) {
         std::size_t msgSize = sizeof(Message);
         if (dest == eMsgBlkLocation::HOST) {
             msgBlk = static_cast<Message *>(malloc(msgSize * MSG_BLOCK_SIZE));
         } else {
             //TODO : add code for device selection
             CUDA_CHECK(cudaMalloc((void **) &msgBlk, msgSize * MSG_BLOCK_SIZE));
+        }
+
+        for(int i = 0; i < MSG_BLOCK_SIZE; i++) {
+                msgBlk[i].seqNumber = i;
+                msgBlk[i].interval = 0;
+                msgBlk[i].bufferSize = MSG_MAX_SIZE;
+                memset(msgBlk[i].buffer, PATTERN, MSG_MAX_SIZE);
         }
         return 0;
     }
