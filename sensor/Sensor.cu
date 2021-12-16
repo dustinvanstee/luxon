@@ -42,7 +42,7 @@ int Sensor::createPCAPFlow(std::string fileName)
 
     //Create the Flow, allocated the memory
     Message* msgBlk = NULL;
-    if(!transport->createMessageBlock(msgBlk, eTransportDest::HOST)){
+    if(!transport->createMessageBlock(msgBlk, eMsgBlkLocation::HOST)){
         return -1;
     }
 
@@ -87,7 +87,7 @@ int Sensor::createRandomFlow(int numMsg) {
     std::vector<block_t> updates = rd->createRandomUpdate(numMsg);
 
     Message* msgBlk = NULL;
-    transport->createMessageBlock(msgBlk, eTransportDest::HOST);
+    transport->createMessageBlock(msgBlk, eMsgBlkLocation::HOST);
 
     int i = 0;
     for (auto &block_t : updates)
@@ -111,7 +111,7 @@ int Sensor::createFinanceFlow(int numMsg) {
 
     std::vector<instrument> updates = md->createRandomUpdate(numMsg);
     Message* msgBlk = NULL;
-    transport->createMessageBlock(msgBlk, eTransportDest::HOST);
+    transport->createMessageBlock(msgBlk, eMsgBlkLocation::HOST);
 
     int i = 0;
     for (auto &instrument : updates)

@@ -20,7 +20,7 @@ UdpTransport::UdpTransport(string localAddr, string mcastAddr, eTransportRole ro
         cerr << "ERROR UdpTransport - Failed to create socket " << errno << endl;
         exit(EXIT_FAILURE);
     }
-    cout << "Created local UDP socket: " << sockfd << endl;
+    DEBUG("Created local UDP socket: " << sockfd << endl);
 
     if(role == eTransportRole::SENSOR)
     {
@@ -144,11 +144,5 @@ int UdpTransport::pop(Message* msgBlk, int numReqMsg, int& numRetMsg)
 
     }
 
-    return 0;
-}
-
-int UdpTransport::freeMessage(Message* m)
-{
-    free(m);
     return 0;
 }

@@ -3,7 +3,7 @@
 
 #include <netinet/in.h>
 
-enum class eTransportDest {HOST, DEVICE};
+enum class eMsgBlkLocation {HOST, DEVICE};
 enum class eTransportType {UDP, RDMA_UD, PRINT, NONE, UNKNOWN};
 enum class eTransportRole {SENSOR, PROCESSOR};
 
@@ -25,15 +25,25 @@ public:
      */
     virtual int push(Message* msgBlk) = 0;
     virtual int pop(Message* msgBlk, int numReqMsg, int& numRetMsg) = 0;
-    virtual int freeMessage(Message* msgBlk) = 0;
 
-    int createMessageBlock(Message* msgBlk, eTransportDest dest) {
+    int createMessageBlock(Message* msgBlk, eMsgBlkLocation dest) {
         std::size_t msgSize = sizeof(Message);
-        if (dest == eTransportDest::HOST) {
+        if (dest == eMsgBlkLocation::HOST) {
             msgBlk = static_cast<Message *>(malloc(msgSize * MSG_BLOCK_SIZE));
         } else {
             //TODO : add code for device selection
-            CUDA_CHECK(cudaMallocManaged((void **) &msgBlk, msgSize * MSG_BLOCK_SIZE));
+            CUDA_CHECK(cudaMalloc((void **) &msgBlk, msgSize * MSG_BLOCK_SIZE));
+        }
+        return 0;
+    }
+
+    int freeMessage(Message* msgBlk, eMsgBlkLocation dest)
+    {
+        if (dest == eMsgBlkLocation::HOST) {
+            free(msgBlk);
+        } else {
+            //TODO : add code for device selection
+            CUDA_CHECK(cudaFree(msgBlk));
         }
         return 0;
     }

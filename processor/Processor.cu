@@ -72,7 +72,7 @@ void Processor::procCountZerosGPU(int minMessageToProcess) {
     int sum =0;
 
     Message* msgBlk;//Create array that is max message block size
-    if(!transport->createMessageBlock(msgBlk, eTransportDest::DEVICE)){
+    if(!transport->createMessageBlock(msgBlk, eMsgBlkLocation::DEVICE)){
         // print error messge
     }
 
@@ -131,7 +131,7 @@ int Processor::procCountZerosCPU(int minMessageToProcess) {
 
     //Intitialize the receive buffer
     Message* msgBlk;//Create array that is max message block size
-    if(!transport->createMessageBlock(msgBlk, eTransportDest::HOST)){
+    if(!transport->createMessageBlock(msgBlk, eMsgBlkLocation::HOST)){
         // print error messge
     }
 
@@ -167,7 +167,7 @@ void Processor::procDropMsg(int minMessageToProcess) {
     timer t;
 
     Message* msgBlk;
-    if(!transport->createMessageBlock(msgBlk, eTransportDest::HOST)){
+    if(!transport->createMessageBlock(msgBlk, eMsgBlkLocation::HOST)){
         exit(EXIT_FAILURE);
     }
 
@@ -204,7 +204,7 @@ void Processor::procDropMsg(int minMessageToProcess) {
 
 int Processor::procPrintMessages(int minMessageToProcess) {
     Message* msgBlk;
-    if(!transport->createMessageBlock(msgBlk, eTransportDest::HOST)){
+    if(!transport->createMessageBlock(msgBlk, eMsgBlkLocation::HOST)){
         exit(EXIT_FAILURE);
     }
     
