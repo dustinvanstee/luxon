@@ -1,9 +1,5 @@
-//
-// Created by alex on 8/7/20.
-//
-
-#ifndef SENSORSIM_RDMA_UD_TRANSPORT_CUH
-#define SENSORSIM_RDMA_UD_TRANSPORT_CUH
+#ifndef LUXON_RDMA_UD_TRANSPORT_CUH
+#define LUXON_RDMA_UD_TRANSPORT_CUH
 
 #include <netinet/in.h>
 #include <unistd.h>
@@ -28,7 +24,6 @@ public:
 private:
     int         push(Message* msgBlk);
     int         pop(Message* msgBlk, int numReqMsg, int& numRetMsg);
-    //Message*    createMessage();
     int         freeMessage(Message* msgBlk);
     int         freeMsgBlock();
 
@@ -78,4 +73,4 @@ private:
     int         GetCMEvent(rdma_cm_event_type *EventType);
 };
 
-#endif //SENSORSIM_RDMA_UD_TRANSPORT_CUH
+#endif //LUXON_RDMA_UD_TRANSPORT_CUH

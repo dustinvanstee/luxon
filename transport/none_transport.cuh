@@ -16,10 +16,12 @@ class NoneTransport: public ITransport {
 public:
     NoneTransport();
 
-private:
     int push(Message* msgBlk);
     int pop(Message* msgBlk, int numReqMsg, int& numRetMsg);
     int freeMessage(Message* msgBlk);
+
+private:
+
 
 };
 

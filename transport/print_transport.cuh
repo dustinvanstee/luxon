@@ -16,10 +16,12 @@ class PrintTransport: public ITransport {
 public:
     PrintTransport();
 
-private:
-    int push(Message* msgBlk);
+    int push(Message* msgBlk) override;
     int pop(Message* msgBlk, int numReqMsg, int& numRetMsg);
     int freeMessage(Message* msgBlk);
+
+private:
+
 };
 
 

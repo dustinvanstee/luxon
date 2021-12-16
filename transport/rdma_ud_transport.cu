@@ -96,7 +96,7 @@ int RdmaUdTransport::push(Message* m)
 
        DEBUG("DEBUG: Sent Message:\n");
       #ifdef DEBUG_BUILD
-       printMessage(m, 32);
+       printMessage(m[0], 32);
        sleep(5);
       #endif
         DEBUG("DEBUG: WRID(" << dataSendWqe.wr_id << ")\tLength(" << dataSendWqe.sg_list->length << ")\n");

@@ -5,7 +5,7 @@
 #include <chrono>
 #include <nvtx3/nvToolsExt.h>
 
-#define DEBUG_BUILD 1
+#define DEBUG_BUILD 0
 
 #ifdef DEBUG_BUILD 
 #define DEBUG(x) std::cerr << x

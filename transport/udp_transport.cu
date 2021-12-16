@@ -1,7 +1,3 @@
-//
-// Created by alex on 7/16/20.
-//
-
 #include <cstdio>
 #include <arpa/inet.h>
 #include <iostream>
@@ -100,9 +96,9 @@ UdpTransport::UdpTransport(string localAddr, string mcastAddr, eTransportRole ro
 
 }
 
-int UdpTransport::push(Message* m)
+int UdpTransport::push(Message* msgBlk)
 {
-    if(sendto(sockfd, (const char *)m->buffer, m->bufferSize,0,
+    if(sendto(sockfd, (const char *)msgBlk->buffer, msgBlk->bufferSize,0,
             (const struct sockaddr *) &this->g_mcastAddr,
                     sizeof(this->g_mcastAddr)) <= 0)
     {
@@ -112,7 +108,7 @@ int UdpTransport::push(Message* m)
     }
     DEBUG("To " << inet_ntoa(g_mcastAddr.sin_addr) << endl);
 #ifdef DEBUG_BUILD
-    printMessage(m, 32);
+    printMessage(&msgBlk[0], 32);
 #endif
     return 0;
 }

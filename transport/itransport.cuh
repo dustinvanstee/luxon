@@ -1,7 +1,3 @@
-//
-// Created by alex on 8/7/20.
-//
-
 #ifndef LUXON_ITRANSPORT_CUH
 #define LUXON_ITRANSPORT_CUH
 
@@ -31,6 +27,16 @@ public:
     virtual int pop(Message* msgBlk, int numReqMsg, int& numRetMsg) = 0;
     virtual int freeMessage(Message* msgBlk) = 0;
 
+    int createMessageBlock(Message* msgBlk, eTransportDest dest) {
+        std::size_t msgSize = sizeof(Message);
+        if (dest == eTransportDest::HOST) {
+            msgBlk = static_cast<Message *>(malloc(msgSize * MSG_BLOCK_SIZE));
+        } else {
+            //TODO : add code for device selection
+            CUDA_CHECK(cudaMallocManaged((void **) &msgBlk, msgSize * MSG_BLOCK_SIZE));
+        }
+        return 0;
+    }
 
     /*
     * Interface Statics
@@ -93,16 +99,7 @@ public:
        return this->TransportTypeToStr(this->transportType);
     }
     
-    int createMessageBlock(Message* msgBlk, eTransportDest dest) { 
-        std::size_t msgSize = sizeof(Message);
-        if(dest == eTransportDest::HOST){
-            msgBlk = static_cast<Message*>(malloc( msgSize*MSG_BLOCK_SIZE));
-        } else {
-            //TODO : add code for device selection
-            CUDA_CHECK( cudaMallocManaged((void **)&msgBlk, msgSize*MSG_BLOCK_SIZE));
-        }
-     return 0;
-    }
+
 protected:
     //All Transports will use basic IPoX as a control plane to establish a connection.
     std::string                 s_mcastAddr;

@@ -4,8 +4,6 @@
 
 #include "print_transport.cuh"
 
-#define PATTERN 0xFEED
-
 PrintTransport::PrintTransport()
 {
     this->transportType = eTransportType::PRINT;
