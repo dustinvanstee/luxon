@@ -29,6 +29,9 @@ public:
      */
     virtual int push(Message* msg) = 0;
     virtual int pop(Message** m, int numReqMsg, int& numRetMsg, eTransportDest dest ) = 0;
+    virtual int pop(Message* m, int numReqMsg, int& numRetMsg, eTransportDest dest ) = 0;
+    virtual int pop(int a) = 0;
+    //virtual int pop2(Message* m[], int numReqMsg, int& numRetMsg, eTransportDest dest ) = 0;
 
     virtual Message* createMessage() = 0;
     virtual int freeMessage(Message* msg) = 0;

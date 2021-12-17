@@ -1,7 +1,7 @@
 //
 // Created by alex on 7/16/20.
 //
-
+#include <string.h>
 #include <cstdio>
 #include <arpa/inet.h>
 #include <iostream>
@@ -20,7 +20,7 @@ UdpTransport::UdpTransport(string localAddr, string mcastAddr, eTransportRole ro
     bzero( &g_mcastAddr, sizeof( g_mcastAddr ) );
 
     // Creating socket file descriptor
-       if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
+       if((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
         cerr << "ERROR UdpTransport - Failed to create socket " << errno << endl;
         exit(EXIT_FAILURE);
     }
@@ -123,16 +123,25 @@ int UdpTransport::push(Message* m)
 int UdpTransport::pop(Message** m, int numReqMsg, int& numRetMsg, eTransportDest dest)
 {
     int rc;
-    sockaddr *name;
-    socklen_t *namelen;
+    sockaddr *name = NULL;
+    socklen_t *namelen = NULL;
+    //name = (sockaddr *) malloc(sizeof(sockaddr));
+    //namelen = (socklen_t *) malloc(sizeof(socklen_t));
+    // If gpu mode, since Message ** is contiguous block of memory instead of array of pointers to structs, need
+    // to shape memory differently.  
+    if(dest == eTransportDest::DEVICE) {
+        printf("Not implemented : Use alternate implementation wiht Message*\n");
+        return 1;
+    }
     uint8_t buffer[MSG_MAX_SIZE];    // receive buffer
 
     DEBUG("waiting on socket " << this->n_localPort << endl);
 
     for(int i = 0; i < numReqMsg; i++)
     {
+        npt("just befeore recvfrom %d\n",0);
         rc = recvfrom(this->sockfd, &buffer, MSG_MAX_SIZE, 0, name, namelen);
-
+        npt("recvfrom rc:%d\n",rc);
         if (rc > 0) {
             m[i]->seqNumber = i;
             m[i]->interval = 0;
@@ -148,6 +157,47 @@ int UdpTransport::pop(Message** m, int numReqMsg, int& numRetMsg, eTransportDest
 
     }
 
+    return 0;
+}
+int UdpTransport::pop(Message* m, int numReqMsg, int& numRetMsg, eTransportDest dest){
+    npt("new GPU implementation%d!\n",999);
+    int rc;
+    sockaddr *name = NULL;
+    socklen_t *namelen = NULL;
+    //name = (sockaddr *) malloc(sizeof(sockaddr));
+    //namelen = (socklen_t *) malloc(sizeof(socklen_t));
+    // If gpu mode, since Message ** is contiguous block of memory instead of array of pointers to structs, need
+    // to shape memory differently.  
+    if(dest != eTransportDest::DEVICE) {
+        printf("Not implemented for HOST : Use alternate implementation with Message*\n");
+        return 1;
+    }
+    uint8_t buffer[MSG_MAX_SIZE];    // receive buffer
+
+    DEBUG("waiting on socket " << this->n_localPort << endl);
+
+    for(int i = 0; i < numReqMsg; i++)
+    {
+        //npt("just befeore recvfrom %d\n",0);
+        rc = recvfrom(this->sockfd, &buffer, MSG_MAX_SIZE, 0, name, namelen);
+        if(i%100==0){npt("MSG %d recv'd nbytes:%d\n",i,rc);}
+        if (rc > 0) {
+            m[i].seqNumber = i;
+            m[i].interval = 0;
+            m[i].bufferSize = rc;
+            memcpy(m[i].buffer,buffer,rc); //TODO: smarter way than a copy?
+            numRetMsg = numRetMsg + 1;
+        } else if(rc == -1) {
+            cerr << "ERROR UdpTransport Pop - failed mcast socket read " << errno << endl;
+            close(sockfd);
+            exit(EXIT_FAILURE);
+        }
+    }
+    return 0;
+}
+
+int UdpTransport::pop(int a){
+    npt("Sample .. overloaded pop implementation [not used and to be removed ..] %d\n",a );
     return 0;
 }
 

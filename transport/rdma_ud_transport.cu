@@ -174,6 +174,16 @@ int RdmaUdTransport::pop(Message** m, int numReqMsg, int& numRetMsg, eTransportD
     return 0;
 }
 
+int RdmaUdTransport::pop(Message* m, int numReqMsg, int& numRetMsg, eTransportDest dest){
+    npt("new pop implementation%d\n",0);
+    return 0;
+}
+
+int RdmaUdTransport::pop(int a){
+    npt("new pop implementation %d\n",a );
+    return 0;
+}
+
 int RdmaUdTransport::initSendWqe(ibv_send_wr* wqe, int i)
 {
     struct ibv_sge *sge;

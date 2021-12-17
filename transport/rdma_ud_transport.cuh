@@ -28,6 +28,8 @@ public:
 private:
     int         push(Message* msg);
     int         pop(Message** msg, int numReqMsg, int& numRetMsg, eTransportDest dest);
+    int         pop(Message* msg, int numReqMsg, int& numRetMsg, eTransportDest dest);
+    int         pop(int a);
     Message*    createMessage();
     int         freeMessage(Message* msg);
     int         freeMsgBlock();

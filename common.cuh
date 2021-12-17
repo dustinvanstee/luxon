@@ -8,14 +8,17 @@
 #include <iostream>
 #include <chrono>
 
-//#define DEBUG_BUILD
+#define DEBUG_BUILD 1 //nead a 1 here for npt
 
 #ifdef DEBUG_BUILD
 #define DEBUG(x) std::cerr << x
 #define DEBUG_DETAIL(x) x
+#define npt(fmt, ...) \
+        do { if (DEBUG_BUILD) fprintf(stderr, "%s:%d:%s(): " fmt, __FILE__, \
+                                __LINE__, __func__, __VA_ARGS__); } while (0)
 #else
-#  define DEBUG(x) do {} while (0)
-#  define DEBUG_DETAIL(x) do {} while (0)
+#define DEBUG(x) do {} while (0)
+#define DEBUG_DETAIL(x) do {} while (0)
 #endif
 
 #define PRINT_UPDATE_DELAY 1    //Used with timer
