@@ -3,7 +3,7 @@ LIBS = -libverbs -lrdmacm -lcuda -lpcap
 
 all: sensor-debug processor-debug
 
-transport: none_transport
+transport: none_transport print_transport udp_transport rdma_ud_transport
 	ar ru lib/libtransport.a lib/none_transport.o lib/print_transport.o lib/udp_transport.o lib/rdma_ud_transport.o
 
 none_transport: transport/udp_transport.cu

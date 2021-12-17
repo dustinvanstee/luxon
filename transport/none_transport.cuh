@@ -18,7 +18,8 @@ public:
 
     int push(Message* msgBlk);
     int pop(Message* msgBlk, int numReqMsg, int& numRetMsg);
-    int freeMessage(Message* msgBlk);
+    int createMessageBlock(Message* &msgBlk, eMsgBlkLocation dest);
+    int freeMessageBlock(Message* msgBlk, eMsgBlkLocation dest);
 
 private:
 

@@ -1,5 +1,6 @@
 #include "rdma_ud_transport.cuh"
 
+#include <assert.h>
 #include <cstdio>
 #include <algorithm>
 #include <arpa/inet.h>
@@ -23,6 +24,38 @@ int get_addr(const char *dst, struct sockaddr *addr)
     freeaddrinfo(res);
     return ret;
 }
+
+int RdmaUdTransport::createMessageBlock(Message* &msgBlk, eMsgBlkLocation dest)
+{
+
+    if (dest == eMsgBlkLocation::HOST) {
+        if(0 != createMessageBlockHelper(msgBlk, dest))
+        {
+            exit(EXIT_FAILURE);
+        }
+
+        //Register this new message block for RDMA access
+        mrMsgBlk = create_MEMORY_REGION(msgBlk, (sizeof(Message) * MSG_BLOCK_SIZE));
+
+        initSendWqe(&dataSendWqe, 42);
+        updateSendWqe(&dataSendWqe, &msgBlk[0], MSG_MAX_SIZE, mrMsgBlk);
+        initRecvWqe(&dataRcvWqe, 99);
+        updateRecvWqe(&dataRcvWqe, &msgBlk[0], MSG_MAX_SIZE, mrMsgBlk);
+
+    } else {
+        //TODO: Need to add ability to rdma to gpu memory.
+        fprintf(stderr, "ERROR: GPU Direct RDMA not supported yet\n");
+        return -1;
+    }
+
+    return 0;
+}
+
+int RdmaUdTransport::freeMessageBlock(Message* msgBlk, eMsgBlkLocation dest)
+{
+    return freeMessageBlockHelper(msgBlk, dest);
+}
+
 
 RdmaUdTransport::RdmaUdTransport(std::string localAddr, std::string mcastAddr, eTransportRole role) {
     this->transportType = eTransportType::RDMA_UD;
@@ -61,36 +94,19 @@ RdmaUdTransport::RdmaUdTransport(std::string localAddr, std::string mcastAddr, e
         exit(EXIT_FAILURE);
     }
 
-    //Initialize the Message Buffer Pool
-    mr_messagePool = create_MEMORY_REGION(&messagePool, (sizeof(Message) * MSG_BLOCK_SIZE));
-    for(int i = 0; i < MSG_BLOCK_SIZE; i++)
-    {
-        messagePoolSlotFree[i] = true;
-    }
-
-    initSendWqe(&dataSendWqe, 42);
-    updateSendWqe(&dataSendWqe, &messagePool[0], MSG_MAX_SIZE, mr_messagePool);
-    initRecvWqe(&dataRcvWqe, 99);
-    updateRecvWqe(&dataRcvWqe, &messagePool[0], MSG_MAX_SIZE, mr_messagePool);
-
 }
 
 RdmaUdTransport::~RdmaUdTransport() {
-
     //Clean the RDMA Contexts
     DestroyContext();
     DestroyQP();
 
-    ibv_dereg_mr(mr_messagePool);
-
-    //Free all the Memory used in the message block
-    freeMsgBlock();
+    ibv_dereg_mr(mrMsgBlk);
 }
 
 int RdmaUdTransport::push(Message* m)
 {
-
-    updateSendWqe(&dataSendWqe, m->buffer, m->bufferSize, mr_messagePool);
+    updateSendWqe(&dataSendWqe, m->buffer, m->bufferSize, mrMsgBlk);
 
     post_SEND_WQE(&dataSendWqe);
 
@@ -131,15 +147,15 @@ int RdmaUdTransport::push(Message* m)
 */
 
 // TODO : 121621 broke this due to code refactor for gpudirect
-int RdmaUdTransport::pop(Message* m, int numReqMsg, int& numRetMsg)
+int RdmaUdTransport::pop(Message* msgBlk, int numReqMsg, int& numRetMsg)
 {
     numRetMsg = 0;
-    Message* msg;
+    Message* msg = NULL;
 
     do {
         //Post the RcvWQE
-        msg = reinterpret_cast<Message *>(&messagePool[numRetMsg * sizeof(Message)]);
-        updateRecvWqe(&dataRcvWqe, msg->buffer, MSG_MAX_SIZE, mr_messagePool);
+        msg = reinterpret_cast<Message *>(&msgBlk[numRetMsg * sizeof(Message)]);
+        updateRecvWqe(&dataRcvWqe, msg->buffer, MSG_MAX_SIZE, mrMsgBlk);
         post_RECEIVE_WQE(&dataRcvWqe);
 
         int r;
@@ -506,39 +522,7 @@ void RdmaUdTransport::DestroyQP()
 
 }
 
-/*
-Message* RdmaUdTransport::createMessage() {
-    Message * m = NULL;
 
-    for(int i = 0; i < MSG_BLOCK_SIZE; i++)
-    {
-        if(messagePoolSlotFree[i])
-        {
-            messagePoolSlotFree[i] = false;
-            m = reinterpret_cast<Message *>(&messagePool[i * sizeof(Message)]);
-            m->seqNumber = 0;
-            m->interval = 0;
-            m->bufferSize = MSG_BLOCK_SIZE;
-            return m;
-        }
-    }
 
-    return NULL; //We went through the whole Memory Pool and didn't find an open slot.
-}
-*/
-int RdmaUdTransport::freeMessage(Message* m)
-{
-    //TODO: need to find and free this slot in the memory pool.
-    return 0;
-}
-
-int RdmaUdTransport::freeMsgBlock()
-{
-    for(int i = 0; i < MSG_BLOCK_SIZE; i++) {
-        messagePoolSlotFree[i] = true;
-        freeMessage(reinterpret_cast<Message *>(messagePool[i]));
-    }
-    return 0;
-}
 
 

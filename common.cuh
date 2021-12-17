@@ -5,7 +5,7 @@
 #include <chrono>
 #include <nvtx3/nvToolsExt.h>
 
-#define DEBUG_BUILD 0
+//#define DEBUG_BUILD 0
 
 #ifdef DEBUG_BUILD 
 #define DEBUG(x) std::cerr << x
@@ -21,15 +21,13 @@
 
 #define PRINT_UPDATE_DELAY 1    //Used with timer
 
-#define MSG_MAX_SIZE 3800       //Max size of a message must be > RAND_FLOW_MSG_SIZE or max size message from pcap
-#define MSG_BLOCK_SIZE 1024     //Number of messages to process in parallel
+#define MSG_MAX_SIZE 1500       //Max size of a message must be > RAND_FLOW_MSG_SIZE or max size message from pcap
+#define MSG_BLOCK_SIZE 150     //Number of messages to process in parallel
 
 #define CUDA_CHECK_LINE(a,file,line) { cudaError_t __cuer = a; if (cudaSuccess != __cuer) { ::fprintf (stderr, "[CUDA-ERRROR] @ %s:%d -- %d : %s -- running %s\n", file,line, __cuer, ::cudaGetErrorString(__cuer),#a) ; ::exit(__cuer) ; } }
 #define CUDA_CHECK(a) CUDA_CHECK_LINE(a,__FILE__,__LINE__)
 #define CU_CHECK_LINE(a,file,line) { CUresult __cuer = a; if (CUDA_SUCCESS != __cuer) { const char* errstr; ::cuGetErrorString(__cuer, &errstr) ; ::fprintf (stderr, "[CU-ERRROR] @ %s:%d -- %d : %s -- running %s\n", file,line, __cuer, errstr,#a) ; ::exit(__cuer) ; } }
 #define CU_CHECK(a) CU_CHECK_LINE(a,__FILE__,__LINE__)
-
-
 
 class timer
 {

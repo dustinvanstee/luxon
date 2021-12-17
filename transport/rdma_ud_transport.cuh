@@ -21,11 +21,13 @@ public:
     RdmaUdTransport(std::string localAddr, std::string mcastAddr, eTransportRole role);
     ~RdmaUdTransport();
 
-private:
     int         push(Message* msgBlk);
     int         pop(Message* msgBlk, int numReqMsg, int& numRetMsg);
-    int         freeMessage(Message* msgBlk);
-    int         freeMsgBlock();
+
+    int         createMessageBlock(Message* &msgBlk, eMsgBlkLocation dest);
+    int         freeMessageBlock(Message* msgBlk, eMsgBlkLocation dest);
+
+private:
 
     struct rdma_event_channel*  g_CMEventChannel;
     struct rdma_cm_id*			g_CMId;
@@ -42,9 +44,7 @@ private:
     uint32_t 				    RemoteQpn;
     uint32_t 				    RemoteQkey;
 
-    uint8_t                     messagePool[MSG_BLOCK_SIZE * sizeof(Message)];
-    bool                        messagePoolSlotFree[MSG_BLOCK_SIZE];  //Track which slots in the message pool is available.
-    ibv_mr*                     mr_messagePool;
+    ibv_mr*                     mrMsgBlk;
 
     ibv_send_wr                 dataSendWqe;
     ibv_recv_wr                 dataRcvWqe;

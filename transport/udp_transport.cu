@@ -113,9 +113,6 @@ int UdpTransport::push(Message* msgBlk)
     return 0;
 }
 
-/*
-*  Pulls a message from the transport and places it in the buffer
-*/
 int UdpTransport::pop(Message* msgBlk, int numReqMsg, int& numRetMsg)
 {
     int rc;
@@ -145,4 +142,14 @@ int UdpTransport::pop(Message* msgBlk, int numReqMsg, int& numRetMsg)
     }
 
     return 0;
+}
+
+int UdpTransport::createMessageBlock(Message* &msgBlk, eMsgBlkLocation dest)
+{
+    return createMessageBlockHelper(msgBlk, dest);
+}
+
+int UdpTransport::freeMessageBlock(Message* msgBlk, eMsgBlkLocation dest)
+{
+    return freeMessageBlockHelper(msgBlk, dest);
 }

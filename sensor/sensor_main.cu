@@ -100,16 +100,20 @@ int main(int argc,char *argv[], char *envp[]) {
     //Create the Sensor
     Sensor s = Sensor(transport, dataSourceType);
 
+    flow f;
+    f.msgBlk = NULL;
+    f.msgCount = 0;
+
     //Create the update flow based on the data source.
     switch(dataSourceType) {
         case eDataSourceType::PCAP:
-            s.createPCAPFlow(fileName);
+            s.createPCAPFlow(f, fileName);
             break;
         case eDataSourceType::RANDOM:
-            s.createRandomFlow(100);
+            s.createRandomFlow(f, 100);
             break;
         case eDataSourceType::FINANCE:
-            s.createFinanceFlow(100);
+            s.createFinanceFlow(f, 100);
             break;
         default :
             cout << "No valid data source" << endl;
@@ -117,27 +121,28 @@ int main(int argc,char *argv[], char *envp[]) {
             return -1;
     }
 
-    cout << "Sensor Flow has " << s.getFlowMsgCount() << " messages w/ avg size " << s.getFlowMsgAvgSize() << endl;
-    cout << "Sensor Flow total size is " << s.getFlowByteLength() << " bytes " << endl;
+    cout << "Sensor Flow has " << s.getFlowMsgCount(f) << " messages w/ avg size " << s.getFlowMsgAvgSize(f) << endl;
+    cout << "Sensor Flow total size is " << s.getFlowByteLength(f) << " bytes " << endl;
     cout << "sending flow for " << numIter << " iterations" << endl;
+    cout << "sending " << numIter * s.getFlowMsgCount(f) << " messages" << endl;
 
     long long sentMessages = 0;
-    int flowLength = s.getFlowMsgCount();
+    int flowLength = s.getFlowMsgCount(f);
 
     timer t_runTime;
 
-    int i = 0;
+    int i = 1; //First Iteration
     t_runTime.start();
     do {
-        if (0 != s.sendFlow())
+        if (0 != s.sendFlow(f))
         {
             cout << "Transport Error Sending sensor Flow - Exiting" << endl;
             return -1;
         }
         sentMessages += flowLength;
-    } while (i++ <= numIter);
+    } while (i++ < numIter);
     t_runTime.stop();
-    cerr << "\rSent " << sentMessages << " messages\t Time: " << t_runTime.seconds_elapsed() << "/" << t_runTime.usec_elapsed() << "msec"  << endl;
+    cerr << "\rSent " << sentMessages << " messages\t Time: " << t_runTime.usec_elapsed() << "usec"  << endl;
 
     cerr << "Rate " << (sentMessages/t_runTime.usec_elapsed()) * 1000 << "Messages Per Second" << endl;
 

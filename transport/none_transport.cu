@@ -19,10 +19,14 @@ int NoneTransport::pop(Message* m, int numReqMsg, int& numRetMsg)
     return 0;
 }
 
-int NoneTransport::freeMessage(Message* m)
+int NoneTransport::createMessageBlock(Message* &msgBlk, eMsgBlkLocation dest)
 {
-    free(m);
-    return 0;
+    return createMessageBlockHelper(msgBlk, dest);
+}
+
+int NoneTransport::freeMessageBlock(Message* msgBlk, eMsgBlkLocation dest)
+{
+    return freeMessageBlockHelper(msgBlk, dest);
 }
 
 

@@ -21,10 +21,15 @@ int PrintTransport::pop(Message* msgBlk, int numReqMsg, int& numRetMsg)
     return 0;
 }
 
-int PrintTransport::freeMessage(Message* m)
+int PrintTransport::createMessageBlock(Message* &msgBlk, eMsgBlkLocation dest)
 {
-    free(m);
-    return 0;
+    return createMessageBlockHelper(msgBlk, dest);
 }
+
+int PrintTransport::freeMessageBlock(Message* msgBlk, eMsgBlkLocation dest)
+{
+    return freeMessageBlockHelper(msgBlk, dest);
+}
+
 
 

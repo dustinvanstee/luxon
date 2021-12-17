@@ -27,35 +27,8 @@ public:
      */
     virtual int push(Message* msgBlk) = 0;
     virtual int pop(Message* msgBlk, int numReqMsg, int& numRetMsg) = 0;
-
-    int createMessageBlock(Message* &msgBlk, eMsgBlkLocation dest) {
-        std::size_t msgSize = sizeof(Message);
-        if (dest == eMsgBlkLocation::HOST) {
-            msgBlk = static_cast<Message *>(malloc(msgSize * MSG_BLOCK_SIZE));
-        } else {
-            //TODO : add code for device selection
-            CUDA_CHECK(cudaMalloc((void **) &msgBlk, msgSize * MSG_BLOCK_SIZE));
-        }
-
-        for(int i = 0; i < MSG_BLOCK_SIZE; i++) {
-                msgBlk[i].seqNumber = i;
-                msgBlk[i].interval = 0;
-                msgBlk[i].bufferSize = MSG_MAX_SIZE;
-                memset(msgBlk[i].buffer, PATTERN, MSG_MAX_SIZE);
-        }
-        return 0;
-    }
-
-    int freeMessage(Message* msgBlk, eMsgBlkLocation dest)
-    {
-        if (dest == eMsgBlkLocation::HOST) {
-            free(msgBlk);
-        } else {
-            //TODO : add code for device selection
-            CUDA_CHECK(cudaFree(msgBlk));
-        }
-        return 0;
-    }
+    virtual int createMessageBlock(Message* &msgBlk, eMsgBlkLocation dest) = 0;
+    virtual int freeMessageBlock(Message* msgBlk, eMsgBlkLocation dest) = 0;
 
     /*
     * Interface Statics
@@ -130,6 +103,35 @@ protected:
     int                         sockfd;
 
     eTransportType              transportType;
+
+    int createMessageBlockHelper(Message* &msgBlk, eMsgBlkLocation dest) {
+        std::size_t msgSize = sizeof(Message);
+        if (dest == eMsgBlkLocation::HOST) {
+            msgBlk = static_cast<Message *>(malloc(msgSize * MSG_BLOCK_SIZE));
+        } else {
+            //TODO : add code for device selection
+            CUDA_CHECK(cudaMalloc((void **) &msgBlk, msgSize * MSG_BLOCK_SIZE));
+        }
+
+        for(int i = 0; i < MSG_BLOCK_SIZE; i++) {
+            msgBlk[i].seqNumber = i;
+            msgBlk[i].interval = 0;
+            msgBlk[i].bufferSize = MSG_MAX_SIZE;
+            memset(msgBlk[i].buffer, PATTERN, MSG_MAX_SIZE);
+        }
+        return 0;
+    }
+
+    int freeMessageBlockHelper(Message* msgBlk, eMsgBlkLocation dest)
+    {
+        if (dest == eMsgBlkLocation::HOST) {
+            free(msgBlk);
+        } else {
+            //TODO : add code for device selection
+            CUDA_CHECK(cudaFree(msgBlk));
+        }
+        return 0;
+    }
 };
 
 
