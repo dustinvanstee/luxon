@@ -104,40 +104,42 @@ RdmaUdTransport::~RdmaUdTransport() {
     ibv_dereg_mr(mrMsgBlk);
 }
 
-int RdmaUdTransport::push(Message* m)
+int RdmaUdTransport::push(Message* m, int numMsg)
 {
-    updateSendWqe(&dataSendWqe, m->buffer, m->bufferSize, mrMsgBlk);
+    for(int i = 0; i < numMsg; i++) {
+        updateSendWqe(&dataSendWqe, m->buffer, m->bufferSize, mrMsgBlk);
 
-    post_SEND_WQE(&dataSendWqe);
+        post_SEND_WQE(&dataSendWqe);
 
-       DEBUG("DEBUG: Sent Message:\n");
-      #ifdef DEBUG_BUILD
-       printMessage(m[0], 32);
-       sleep(5);
-      #endif
+        DEBUG("DEBUG: Sent Message:\n");
+#ifdef DEBUG_BUILD
+        printMessage(m[0], 32);
+        sleep(5);
+#endif
         DEBUG("DEBUG: WRID(" << dataSendWqe.wr_id << ")\tLength(" << dataSendWqe.sg_list->length << ")\n");
 
-      //Wait For Completion
-      int ret;
+        //Wait For Completion
+        int ret;
 
-      DEBUG("DEBUG: Waiting for CQE\n");
-      do {
-          ret = ibv_poll_cq(g_cq, 1, &dataWc);
-      } while(ret == 0);
-      DEBUG("DEBUG: Received " << ret << " CQE Elements\n");
-      DEBUG("DEBUG: WRID(" << dataWc.wr_id << ")\tStatus(" << dataWc.status << ") length( " <<dataWc.byte_len << ")\n");
+        DEBUG("DEBUG: Waiting for CQE\n");
+        do {
+            ret = ibv_poll_cq(g_cq, 1, &dataWc);
+        } while (ret == 0);
+        DEBUG("DEBUG: Received " << ret << " CQE Elements\n");
+        DEBUG("DEBUG: WRID(" << dataWc.wr_id << ")\tStatus(" << dataWc.status << ") length( " << dataWc.byte_len
+                             << ")\n");
 
-      if(dataWc.status == IBV_WC_RNR_RETRY_EXC_ERR)
-      {
-          usleep(50); //wait 50 us and we will try again.
-          std::cerr << "DEBUG: WRID(" << dataWc.wr_id << ")\tStatus(IBV_WC_RNR_RETRY_EXC_ERR)" << std::endl;
-          return -1;
-      }
-      if(dataWc.status != IBV_WC_SUCCESS)
-      {
-          std::cerr << "DEBUG: WRID(" << dataWc.wr_id << ")\tStatus(" << dataWc.status << ")" << std::endl;
-          return -1;
-      }
+        if (dataWc.status == IBV_WC_RNR_RETRY_EXC_ERR) {
+            usleep(50); //wait 50 us and we will try again.
+            std::cerr << "DEBUG: WRID(" << dataWc.wr_id << ")\tStatus(IBV_WC_RNR_RETRY_EXC_ERR)" << std::endl;
+            return -1;
+        }
+        if (dataWc.status != IBV_WC_SUCCESS) {
+            std::cerr << "DEBUG: WRID(" << dataWc.wr_id << ")\tStatus(" << dataWc.status << ")" << std::endl;
+            return -1;
+        }
+
+    }
 
     return 0;
 }

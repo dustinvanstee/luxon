@@ -9,8 +9,10 @@ NoneTransport::NoneTransport()
     this->transportType = eTransportType::NONE;
 }
 
-int NoneTransport::push(Message* m)
+int NoneTransport::push(Message* m, int numMsg)
 {
+    int i = 0; //Some stuff to avoid getting this whole stack call optimized out.
+    i++;
     return 0;
 }
 

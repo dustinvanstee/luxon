@@ -9,9 +9,12 @@ PrintTransport::PrintTransport()
     this->transportType = eTransportType::PRINT;
 }
 
-int PrintTransport::push(Message* m)
+int PrintTransport::push(Message* m, int numMsg)
 {
-    printMessage(m, 32);
+    for(int i = 0; i < numMsg; i++)
+    {
+        printMessage(&m[i], 32);
+    }
     return 0;
 }
 

@@ -25,7 +25,7 @@ public:
     /*
      * Interface Methods
      */
-    virtual int push(Message* msgBlk) = 0;
+    virtual int push(Message* msgBlk, int numMsg) = 0;
     virtual int pop(Message* msgBlk, int numReqMsg, int& numRetMsg) = 0;
     virtual int createMessageBlock(Message* &msgBlk, eMsgBlkLocation dest) = 0;
     virtual int freeMessageBlock(Message* msgBlk, eMsgBlkLocation dest) = 0;

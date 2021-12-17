@@ -96,20 +96,21 @@ UdpTransport::UdpTransport(string localAddr, string mcastAddr, eTransportRole ro
 
 }
 
-int UdpTransport::push(Message* msgBlk)
+int UdpTransport::push(Message* msgBlk, int numMsg)
 {
-    if(sendto(sockfd, (const char *)msgBlk->buffer, msgBlk->bufferSize,0,
-            (const struct sockaddr *) &this->g_mcastAddr,
-                    sizeof(this->g_mcastAddr)) <= 0)
-    {
-        cerr << "ERROR UdpTransport Push - failed sendto operation " << errno << endl;
-        close(sockfd);
-        exit(EXIT_FAILURE);
-    }
-    DEBUG("To " << inet_ntoa(g_mcastAddr.sin_addr) << endl);
+    for(int i = 0; i < numMsg; i++) {
+        if (sendto(sockfd, (const char *) msgBlk[i].buffer, msgBlk[i].bufferSize, 0,
+                   (const struct sockaddr *) &this->g_mcastAddr,
+                   sizeof(this->g_mcastAddr)) <= 0) {
+            cerr << "ERROR UdpTransport Push - failed sendto operation " << errno << endl;
+            close(sockfd);
+            exit(EXIT_FAILURE);
+        }
+        DEBUG("To " << inet_ntoa(g_mcastAddr.sin_addr) << endl);
 #ifdef DEBUG_BUILD
-    printMessage(&msgBlk[0], 32);
+        printMessage(&msgBlk[0], 32);
 #endif
+    }
     return 0;
 }
 

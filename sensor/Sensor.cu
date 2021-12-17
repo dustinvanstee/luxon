@@ -97,8 +97,8 @@ int Sensor::createRandomFlow(flow &f, int numMsg) {
     {
         f.msgBlk[i].seqNumber = i;
         f.msgBlk[i].interval = 100;
-        f.msgBlk[i].bufferSize = sizeof(block_t);
-        memcpy(&f.msgBlk[i].buffer, &block_t, sizeof(block_t));
+        f.msgBlk[i].bufferSize = min(MSG_MAX_SIZE, static_cast<int>(sizeof(block_t)));
+        memcpy(&f.msgBlk[i].buffer, &block_t, min(MSG_MAX_SIZE, static_cast<int>(sizeof(block_t))));
         i++;
     }
     f.msgCount = i;
@@ -160,16 +160,12 @@ int Sensor::getFlowMsgAvgSize(flow &f) {
     for (int i=0; (i < f.msgCount ) ; i++) {
         sumOfLengths += f.msgBlk->bufferSize;
     }
-
     return sumOfLengths/f.msgCount;
 }
 
 int Sensor::sendFlow(flow &f) {
-    for (int i=0; (i < f.msgCount ) ; i++) {
-        if(0 != transport->push(&f.msgBlk[i]))
-        {
-            return -1;
-        }
+    if (0 != transport->push(f.msgBlk, f.msgCount)) {
+        return -1;
     }
     return 0;
 }
