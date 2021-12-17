@@ -2,7 +2,7 @@ CXXCUDA=/usr/local/cuda-11.4/bin/nvcc
 LIBS = -libverbs -lrdmacm -lcuda -lpcap # -lcudart
 
 OBJ=$(wildcard lib/*.o)
-
+DHEADERS=$(shell echo */*cuh)
 
 all: bin/sensor-debug bin/processor-debug
 p: bin/processor-debug
@@ -27,10 +27,10 @@ lib/rdma_ud_transport.o: transport/rdma_ud_transport.cu
 
 # $@ is the name of target:wildcard
 # $^ filename of all prerequisites
-bin/processor-debug: lib/libtransport.a processor/processor_main.cu processor/Processor.cu
+bin/processor-debug: lib/libtransport.a processor/processor_main.cu processor/Processor.cu $(DHEADERS)
 	$(CXXCUDA) -rdc=true -g -o bin/processor-debug processor/Processor.cu processor/processor_main.cu lib/libtransport.a  $(LIBS)
 
-bin/sensor-debug: lib/libtransport.a sensor/sensor_main.cu sensor/Sensor.cu
+bin/sensor-debug: lib/libtransport.a sensor/sensor_main.cu sensor/Sensor.cu $(DHEADERS)
 	$(CXXCUDA) -g -o bin/sensor-debug sensor/sensor_main.cu sensor/Sensor.cu lib/libtransport.a $(LIBS)
 
 clean:
