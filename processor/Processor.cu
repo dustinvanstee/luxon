@@ -67,9 +67,10 @@ void Processor::procCountZerosGPU(int minMessageToProcess) {
     int processedMessages = 0;
     int sum =0;
 
-    Message* msgBlk = NULL;//Create array that is max message block size
+    MessageBlk msgBlk;
+    MessageBlk* pmsgBlk = &msgBlk; //This is hacky, probably better to refactor createMessageblcok to pass by reference.
 
-    if(!transport->createMessageBlock(msgBlk, eMsgBlkLocation::DEVICE)){
+    if(!transport->createMessageBlock(pmsgBlk, eMsgBlkLocation::DEVICE)){
         // print error messge
     }
 
@@ -80,15 +81,15 @@ void Processor::procCountZerosGPU(int minMessageToProcess) {
 
     while (processedMessages < minMessageToProcess) {
 
-        if (0 != transport->pop(msgBlk, MSG_BLOCK_SIZE, msgCountReturned)) {
+        if (0 != transport->pop(pmsgBlk, MSG_BLOCK_SIZE, msgCountReturned)) {
             exit(EXIT_FAILURE);
         }
 
-        cudaMemPrefetchAsync(msgBlk, MSG_BLOCK_SIZE*sizeof(Message), deviceId);
+        cudaMemPrefetchAsync(pmsgBlk, MSG_BLOCK_SIZE*sizeof(Message), deviceId);
 
         if(msgCountReturned > 0) //If there are new messages process them
         {
-            gpu_count_zeros <<< numberOfBlocks, threadsPerBlock >>>(msgBlk, blockSum, msgCountReturned);
+            gpu_count_zeros <<< numberOfBlocks, threadsPerBlock >>>(msgBlk.messages, blockSum, msgCountReturned);
 
             checkCuda( cudaGetLastError() );
             checkCuda( cudaDeviceSynchronize() ); //Wait for GPU threads to complete
@@ -110,7 +111,7 @@ void Processor::procCountZerosGPU(int minMessageToProcess) {
 
     }
 
-    checkCuda( cudaFree(msgBlk));
+    checkCuda( cudaFree(pmsgBlk));
     checkCuda( cudaFree(blockSum));
 
     std::cout << "\n Processing Completed: " << std::endl;
@@ -128,21 +129,23 @@ int Processor::procCountZerosCPU(int minMessageToProcess) {
     int processedMessages = 0;
 
     //Intitialize the receive buffer
-    Message* msgBlk;//Create array that is max message block size
-    if(!transport->createMessageBlock(msgBlk, eMsgBlkLocation::HOST)){
+    MessageBlk msgBlk;
+    MessageBlk* pmsgBlk = &msgBlk; //This is hacky, probably better to refactor createMessageblcok to pass by reference.
+
+    if(!transport->createMessageBlock(pmsgBlk, eMsgBlkLocation::HOST)){
         // print error messge
     }
 
     while (processedMessages < minMessageToProcess) {
 
-        if (0 != transport->pop(msgBlk, MSG_BLOCK_SIZE, msgCountReturned)) {
+        if (0 != transport->pop(pmsgBlk, MSG_BLOCK_SIZE, msgCountReturned)) {
             exit(EXIT_FAILURE);
         }
 
         if(msgCountReturned > 0) //If there are new messages process them
         {
             std::cerr << "\rProcessed " << processedMessages << " messages";
-            cpu_count_zeros(msgBlk, sum, msgCountReturned);
+            cpu_count_zeros(msgBlk.messages, sum, msgCountReturned);
             processedMessages += msgCountReturned;
         }
         msgCountReturned=0;
@@ -152,7 +155,7 @@ int Processor::procCountZerosCPU(int minMessageToProcess) {
     //Free the receive buffer
     for(int i = 0; i < MSG_BLOCK_SIZE; i++)
     {
-        transport->freeMessageBlock(&msgBlk[i],eMsgBlkLocation::HOST) ;
+        transport->freeMessageBlock(pmsgBlk,eMsgBlkLocation::HOST) ;
     }
 
     std::cout << "\nProcessing Completed: " << std::endl;
@@ -164,8 +167,10 @@ int Processor::procCountZerosCPU(int minMessageToProcess) {
 void Processor::procDropMsg(int minMessageToProcess) {
     timer t;
 
-    Message* msgBlk;
-    if(!transport->createMessageBlock(msgBlk, eMsgBlkLocation::HOST)){
+    MessageBlk msgBlk;
+    MessageBlk* pmsgBlk = &msgBlk; //This is hacky, probably better to refactor createMessageblcok to pass by reference.
+
+    if(!transport->createMessageBlock(pmsgBlk, eMsgBlkLocation::HOST)){
         exit(EXIT_FAILURE);
     }
 
@@ -175,7 +180,7 @@ void Processor::procDropMsg(int minMessageToProcess) {
     t.start();
     while (processedMessages < minMessageToProcess) {
 
-        if (0 != transport->pop(msgBlk, MSG_BLOCK_SIZE, msgCountReturned)) {
+        if (0 != transport->pop(pmsgBlk, MSG_BLOCK_SIZE, msgCountReturned)) {
             exit(EXIT_FAILURE);
         }
 
@@ -192,7 +197,7 @@ void Processor::procDropMsg(int minMessageToProcess) {
     //Free the receive buffer
     for(int i = 0; i < MSG_BLOCK_SIZE; i++)
     {
-        transport->freeMessageBlock(&msgBlk[i],eMsgBlkLocation::DEVICE);
+        transport->freeMessageBlock(pmsgBlk,eMsgBlkLocation::DEVICE);
     }
 
     std::cout << "\nProcessing Completed: " << std::endl;
@@ -201,8 +206,10 @@ void Processor::procDropMsg(int minMessageToProcess) {
 }
 
 int Processor::procPrintMessages(int minMessageToProcess) {
-    Message* msgBlk;
-    if(!transport->createMessageBlock(msgBlk, eMsgBlkLocation::HOST)){
+
+    MessageBlk msgBlk;
+    MessageBlk* pmsgBlk = &msgBlk; //This is hacky, probably better to refactor createMessageblcok to pass by reference.
+    if(!transport->createMessageBlock(pmsgBlk, eMsgBlkLocation::HOST)){
         exit(EXIT_FAILURE);
     }
     
@@ -211,7 +218,7 @@ int Processor::procPrintMessages(int minMessageToProcess) {
 
     do {
 
-        if (0 != transport->pop(msgBlk, MSG_BLOCK_SIZE, messagesReturned)) {
+        if (0 != transport->pop(pmsgBlk, MSG_BLOCK_SIZE, messagesReturned)) {
             exit(EXIT_FAILURE);
         }
 
@@ -220,7 +227,7 @@ int Processor::procPrintMessages(int minMessageToProcess) {
         std::cout << "Printing first bytes of " << min(messagesReturned,minMessageToProcess) << " messages" << std::endl;
         for(int i = 0; i<min(messagesReturned,minMessageToProcess); i++)
         {
-            transport->printMessage(&msgBlk[i], 32);
+            transport->printMessage(&msgBlk.messages[i], 32);
             std::cout << std::endl;
         }
     } while (processedCount < minMessageToProcess);
@@ -228,7 +235,7 @@ int Processor::procPrintMessages(int minMessageToProcess) {
     //Free the receive buffer
     for(int i = 0; i < MSG_BLOCK_SIZE; i++)
     {
-        transport->freeMessageBlock(&msgBlk[i],eMsgBlkLocation::HOST);
+        transport->freeMessageBlock(pmsgBlk,eMsgBlkLocation::HOST);
     }
 
     //Simple process (i.e. print)
