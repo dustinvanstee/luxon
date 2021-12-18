@@ -121,7 +121,7 @@ int UdpTransport::pop(MessageBlk* msgBlk, int numReqMsg, int& numRetMsg)
     socklen_t *namelen = NULL;
     uint8_t buffer[MSG_MAX_SIZE];    // receive buffer
 
-    DEBUG("waiting on socket " << this->n_localPort << endl);
+    npt("waiting on socket %d\n",this->n_localPort);
 
     for(int i = 0; i < numReqMsg; i++)
     {
