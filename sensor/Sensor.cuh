@@ -9,28 +9,22 @@
 #include "../data/idataSource.cuh"
 #include "../transport/itransport.cuh"
 
-typedef struct
-{
-   int msgCount;
-   Message* msgBlk;
-} flow;
-
 class Sensor {
 public:
     Sensor(ITransport*, eDataSourceType); // Constructor declaration
 
     //Flow Creation Functions
-    int createRandomFlow(flow &f, int numMsg);
-    int createFinanceFlow(flow &f, int numMsg);
-    int createPCAPFlow(flow &f, std::string fileName); //TODO: Need to create a data source class for pcap, this can solve overrun issue.
+    int createRandomFlow(MessageBlk &mb, int numMsg);
+    int createFinanceFlow(MessageBlk &mb, int numMsg);
+    int createPCAPFlow(MessageBlk &mb, std::string fileName); //TODO: Need to create a data source class for pcap, this can solve overrun issue.
 
-    int getFlowByteLength(flow &f);                    //Length of the flow in Bytes
-    int getFlowMsgCount(flow &f);                      //Number of Messages in the Flow
-    int getFlowMsgAvgSize(flow &f);                    //Average Size of a Message in the flow
+    int getFlowByteLength(MessageBlk &mb);                    //Length of the flow in Bytes
+    int getFlowMsgCount(MessageBlk &mb);                      //Number of Messages in the Flow
+    int getFlowMsgAvgSize(MessageBlk &mb);                    //Average Size of a Message in the flow
 
     //Flow display
-    void printFlow(flow &f);
-    int sendFlow(flow &f);
+    void printFlow(MessageBlk &mb);
+    int sendFlow(MessageBlk &mb);
 
 private:
     IDataSource*        dataSource;

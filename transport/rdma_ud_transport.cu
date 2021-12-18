@@ -25,7 +25,7 @@ int get_addr(const char *dst, struct sockaddr *addr)
     return ret;
 }
 
-int RdmaUdTransport::createMessageBlock(Message* &msgBlk, eMsgBlkLocation dest)
+int RdmaUdTransport::createMessageBlock(MessageBlk* msgBlk, eMsgBlkLocation dest)
 {
 
     if (dest == eMsgBlkLocation::HOST) {
@@ -35,12 +35,19 @@ int RdmaUdTransport::createMessageBlock(Message* &msgBlk, eMsgBlkLocation dest)
         }
 
         //Register this new message block for RDMA access
-        mrMsgBlk = create_MEMORY_REGION(msgBlk, (sizeof(Message) * MSG_BLOCK_SIZE));
+        mrMsgBlk = create_MEMORY_REGION(msgBlk->messages, (sizeof(Message) * MSG_BLOCK_SIZE));
 
-        initSendWqe(&dataSendWqe, 42);
-        updateSendWqe(&dataSendWqe, &msgBlk[0], MSG_MAX_SIZE, mrMsgBlk);
-        initRecvWqe(&dataRcvWqe, 99);
-        updateRecvWqe(&dataRcvWqe, &msgBlk[0], MSG_MAX_SIZE, mrMsgBlk);
+        //Create Match Set of QP work elements.
+        for(int i = 0; i < MSG_BLOCK_SIZE; i++)
+        {
+            initSendWqe(&sendWqe[i], i);
+            if(i<MSG_BLOCK_SIZE) {
+                sendWqe[i].next = &sendWqe[i + 1];
+            }
+            updateSendWqe(&sendWqe[i], &msgBlk->messages[0], MSG_MAX_SIZE, mrMsgBlk);
+            initRecvWqe(&rcvWqe[i], i);
+            updateRecvWqe(&rcvWqe[i], &msgBlk->messages[0], MSG_MAX_SIZE, mrMsgBlk);
+        }
 
     } else {
         //TODO: Need to add ability to rdma to gpu memory.
@@ -51,7 +58,7 @@ int RdmaUdTransport::createMessageBlock(Message* &msgBlk, eMsgBlkLocation dest)
     return 0;
 }
 
-int RdmaUdTransport::freeMessageBlock(Message* msgBlk, eMsgBlkLocation dest)
+int RdmaUdTransport::freeMessageBlock(MessageBlk* msgBlk, eMsgBlkLocation dest)
 {
     return freeMessageBlockHelper(msgBlk, dest);
 }
@@ -104,38 +111,50 @@ RdmaUdTransport::~RdmaUdTransport() {
     ibv_dereg_mr(mrMsgBlk);
 }
 
-int RdmaUdTransport::push(Message* m, int numMsg)
+int RdmaUdTransport::push(MessageBlk* m, int numMsg)
 {
+    int err;
+    int ret = 0;
+    struct ibv_send_wr *bad_wqe = NULL;
+
+    if(numMsg < MSG_BLOCK_SIZE)
+    {
+        sendWqe[numMsg].next = NULL; //Stop sending after numMsgs.
+    }
+
+    do {
+        err = ibv_post_send(g_CMId->qp, sendWqe, &bad_wqe);
+
+        fprintf(stderr, "ERROR: post_SEND_WQE Error %u\n", err);
+        if (err == ENOMEM) //Queue Full Wait for CQ Polling Thread to Clear
+        {
+            fprintf(stderr, "ERROR: Send Queue Full Retry %u of 10\n", ret);
+            usleep(100); //Wait 100 Microseconds, max of 1 msec
+        } else {
+            fprintf(stderr, "ERROR: Unrecoverable Send Queue, aborting\n");
+            return -1;
+        }
+    } while(err != 0);
+
     for(int i = 0; i < numMsg; i++) {
-        updateSendWqe(&dataSendWqe, m->buffer, m->bufferSize, mrMsgBlk);
-
-        post_SEND_WQE(&dataSendWqe);
-
-        DEBUG("DEBUG: Sent Message:\n");
-#ifdef DEBUG_BUILD
-        printMessage(m[0], 32);
-        sleep(5);
-#endif
-        DEBUG("DEBUG: WRID(" << dataSendWqe.wr_id << ")\tLength(" << dataSendWqe.sg_list->length << ")\n");
-
         //Wait For Completion
         int ret;
 
         DEBUG("DEBUG: Waiting for CQE\n");
         do {
-            ret = ibv_poll_cq(g_cq, 1, &dataWc);
+            ret = ibv_poll_cq(g_cq, 1, &cqe[0]);
         } while (ret == 0);
         DEBUG("DEBUG: Received " << ret << " CQE Elements\n");
-        DEBUG("DEBUG: WRID(" << dataWc.wr_id << ")\tStatus(" << dataWc.status << ") length( " << dataWc.byte_len
+        DEBUG("DEBUG: WRID(" << cqe.wr_id << ")\tStatus(" << cqe.status << ") length( " << cqe.byte_len
                              << ")\n");
 
-        if (dataWc.status == IBV_WC_RNR_RETRY_EXC_ERR) {
+        if (cqe[0].status == IBV_WC_RNR_RETRY_EXC_ERR) {
             usleep(50); //wait 50 us and we will try again.
-            std::cerr << "DEBUG: WRID(" << dataWc.wr_id << ")\tStatus(IBV_WC_RNR_RETRY_EXC_ERR)" << std::endl;
+            //std::cerr << "DEBUG: WRID(" << cqe.wr_id << ")\tStatus(IBV_WC_RNR_RETRY_EXC_ERR)" << std::endl;
             return -1;
         }
-        if (dataWc.status != IBV_WC_SUCCESS) {
-            std::cerr << "DEBUG: WRID(" << dataWc.wr_id << ")\tStatus(" << dataWc.status << ")" << std::endl;
+        if (cqe[0].status != IBV_WC_SUCCESS) {
+            //std::cerr << "DEBUG: WRID(" << cqe.wr_id << ")\tStatus(" <<  cqe.status << ")" << std::endl;
             return -1;
         }
 
@@ -149,7 +168,7 @@ int RdmaUdTransport::push(Message* m, int numMsg)
 */
 
 // TODO : 121621 broke this due to code refactor for gpudirect
-int RdmaUdTransport::pop(Message* msgBlk, int numReqMsg, int& numRetMsg)
+int RdmaUdTransport::pop(MessageBlk* msgBlk, int numReqMsg, int& numRetMsg)
 {
     numRetMsg = 0;
     Message* msg = NULL;
@@ -157,14 +176,14 @@ int RdmaUdTransport::pop(Message* msgBlk, int numReqMsg, int& numRetMsg)
     do {
         //Post the RcvWQE
         msg = reinterpret_cast<Message *>(&msgBlk[numRetMsg * sizeof(Message)]);
-        updateRecvWqe(&dataRcvWqe, msg->buffer, MSG_MAX_SIZE, mrMsgBlk);
-        post_RECEIVE_WQE(&dataRcvWqe);
+        updateRecvWqe(&rcvWqe[numRetMsg], msgBlk->messages[numRetMsg].buffer, MSG_MAX_SIZE, mrMsgBlk);
+        post_RECEIVE_WQE(&rcvWqe[numRetMsg]);
 
         int r;
         DEBUG("DEBUG: Waiting for CQE\n");
         do {
             //TODO: We should be pulling block size (1k) messages at a time
-            r = ibv_poll_cq(g_cq, 1, &dataWc);
+            r = ibv_poll_cq(g_cq, 1, &cqe[0]);
         } while (r == 0);
         DEBUG("DEBUG: Received " << r << " CQE Elements\n");
 
@@ -172,13 +191,13 @@ int RdmaUdTransport::pop(Message* msgBlk, int numReqMsg, int& numRetMsg)
 
         for (int j = 0; j < r; j++) {
             DEBUG ("test");
-            DEBUG("DEBUG: WRID(" << dataWc.wr_id <<
-                                 ")\tStatus(" << dataWc.status << ")" <<
-                                 ")\tSize(" << dataWc.byte_len << ")\n");
+            DEBUG("DEBUG: WRID(" << cqe.wr_id <<
+                                 ")\tStatus(" << cqe.status << ")" <<
+                                 ")\tSize(" << cqe.byte_len << ")\n");
         }
 
         *msg->buffer += 40;
-        msg->bufferSize = dataWc.byte_len - 40;
+        msg->bufferSize = cqe[0].byte_len - 40;
         msg->seqNumber = numRetMsg-1;
         msg->interval = 0;
         //m[numRetMsg-1] = msg;
@@ -247,39 +266,6 @@ int RdmaUdTransport::updateRecvWqe(ibv_recv_wr *wqe, void *buffer, size_t buffer
     wqe->sg_list->length = bufferlen;
     wqe->sg_list->lkey = bufferMemoryRegion->lkey;
     return 0;
-}
-
-/*
- * puts the work queue element (WQE) on the send queue.
- * returns: 0 on SUCCESS, -1 on failure
- */
-int RdmaUdTransport::post_SEND_WQE(ibv_send_wr* ll_wqe)
-{
-    int err;
-    int ret = 0;
-    struct ibv_send_wr *bad_wqe = NULL;
-
-    do{
-        err = ibv_post_send(g_CMId->qp, ll_wqe, &bad_wqe);
-
-        if(err == 0){
-            return 0;
-        }
-
-        fprintf(stderr,"ERROR: post_SEND_WQE Error %u\n", err);
-        if(err == ENOMEM && ret++ < 10) //Queue Full Wait for CQ Polling Thread to Clear
-        {
-            fprintf(stderr,"ERROR: Send Queue Full Retry %u of 10\n", ret);
-            usleep(100); //Wait 100 Microseconds, max of 1 msec
-        }
-        else
-        {
-            fprintf(stderr, "ERROR: Unrecoverable Send Queue, aborting\n");
-            return -1;
-        }
-
-    }while(true);
-
 }
 
 int RdmaUdTransport::post_RECEIVE_WQE(ibv_recv_wr* ll_wqe)
@@ -426,8 +412,8 @@ int RdmaUdTransport::RDMACreateQP()
     //qp_init_attr.sq_sig_all = 0;
     qp_init_attr.send_cq = g_cq;
     qp_init_attr.recv_cq = g_cq;
-    qp_init_attr.cap.max_send_wr = NUM_OPERATIONS;
-    qp_init_attr.cap.max_recv_wr = NUM_OPERATIONS;
+    qp_init_attr.cap.max_send_wr = MSG_BLOCK_SIZE;
+    qp_init_attr.cap.max_recv_wr = MSG_BLOCK_SIZE;
     qp_init_attr.cap.max_send_sge = 1;
     qp_init_attr.cap.max_recv_sge = 1;
 

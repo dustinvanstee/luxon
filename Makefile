@@ -6,6 +6,7 @@ OBJ=$(wildcard lib/*.o)
 
 all: bin/sensor-debug bin/processor-debug
 p: bin/processor-debug
+s: bin/sensor-debug
 
 # 121021 dv modified to get build caching effect : https://stackoverflow.com/questions/7815400/how-do-i-make-makefile-to-recompile-only-changed-files
 

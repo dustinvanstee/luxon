@@ -22,11 +22,8 @@ Sensor::Sensor(ITransport* t, eDataSourceType dst) {
     }
 }
 
-int Sensor::createPCAPFlow(flow &f, std::string fileName)
+int Sensor::createPCAPFlow(MessageBlk &mb, std::string fileName)
 {
-    f.msgBlk = NULL;
-    f.msgCount = 0;
-
     if(dataSource->getType() != eDataSourceType::PCAP) {
         return -1;
     }
@@ -44,7 +41,7 @@ int Sensor::createPCAPFlow(flow &f, std::string fileName)
     }
 
     //Create the Flow, allocated the memory
-    if(!transport->createMessageBlock(f.msgBlk, eMsgBlkLocation::HOST)){
+    if(!transport->createMessageBlock(&mb, eMsgBlkLocation::HOST)){
         return -1;
     }
 
@@ -63,13 +60,13 @@ int Sensor::createPCAPFlow(flow &f, std::string fileName)
         //deltaSec = (header->ts.tv_sec) - lastMsgSec; //TODO: Calculating Message interval factor in > 1 Second delays
         deltaUSec = (header->ts.tv_usec) - lastMsgUsec;
 
-        f.msgBlk[i].seqNumber = i;
-        f.msgBlk[i].interval = deltaUSec;
-        f.msgBlk[i].bufferSize = header->caplen;
-        memcpy(f.msgBlk[i].buffer, data, header->caplen);
+        mb.messages[i].seqNumber = i;
+        mb.messages[i].interval = deltaUSec;
+        mb.messages[i].bufferSize = header->caplen;
+        memcpy(mb.messages[i].buffer, data, header->caplen);
 
         std::cout << "Adding to flow: ";
-        transport->printMessage(&f.msgBlk[i], 0);
+        transport->printMessage(&mb.messages[i], 0);
         std::cout << std::endl;
 
         i++;
@@ -78,9 +75,8 @@ int Sensor::createPCAPFlow(flow &f, std::string fileName)
     return 0;
 }
 
-int Sensor::createRandomFlow(flow &f, int numMsg) {
-    f.msgBlk = NULL;
-    f.msgCount = 0;
+int Sensor::createRandomFlow(MessageBlk &mb, int numMsg) {
+    mb.msgCount = 0;
 
     if(dataSource->getType() != eDataSourceType::RANDOM) {
         return -1;
@@ -90,25 +86,24 @@ int Sensor::createRandomFlow(flow &f, int numMsg) {
 
     std::vector<block_t> updates = rd->createRandomUpdate(numMsg);
 
-    transport->createMessageBlock(f.msgBlk, eMsgBlkLocation::HOST);
+    transport->createMessageBlock(&mb, eMsgBlkLocation::HOST);
 
     int i = 0;
     for (auto &block_t : updates)
     {
-        f.msgBlk[i].seqNumber = i;
-        f.msgBlk[i].interval = 100;
-        f.msgBlk[i].bufferSize = min(MSG_MAX_SIZE, static_cast<int>(sizeof(block_t)));
-        memcpy(&f.msgBlk[i].buffer, &block_t, min(MSG_MAX_SIZE, static_cast<int>(sizeof(block_t))));
+        mb.messages[i].seqNumber = i;
+        mb.messages[i].interval = 100;
+        mb.messages[i].bufferSize = min(MSG_MAX_SIZE, static_cast<int>(sizeof(block_t)));
+        memcpy(& mb.messages[i].buffer, &block_t, min(MSG_MAX_SIZE, static_cast<int>(sizeof(block_t))));
         i++;
     }
-    f.msgCount = i;
+    mb.msgCount = i;
     return 0;
 }
 
-int Sensor::createFinanceFlow(flow &f, int numMsg) {
+int Sensor::createFinanceFlow(MessageBlk &mb, int numMsg) {
 
-    f.msgBlk = NULL;
-    f.msgCount = 0;
+    mb.msgCount = 0;
 
     if(dataSource->getType() != eDataSourceType::FINANCE) {
         return -1;
@@ -117,54 +112,54 @@ int Sensor::createFinanceFlow(flow &f, int numMsg) {
 
     std::vector<instrument> updates = md->createRandomUpdate(numMsg);
 
-    transport->createMessageBlock(f.msgBlk, eMsgBlkLocation::HOST);
+    transport->createMessageBlock(&mb, eMsgBlkLocation::HOST);
 
     int i = 0;
     for (auto &instrument : updates)
     {
-        f.msgBlk[i].seqNumber = i;
-        f.msgBlk[i].interval = 100;
-        f.msgBlk[i].bufferSize = sizeof(instrument);
-        memcpy(&f.msgBlk[i].buffer, &instrument, sizeof(instrument));
+        mb.messages[i].seqNumber = i;
+        mb.messages[i].interval = 100;
+        mb.messages[i].bufferSize = sizeof(instrument);
+        memcpy(& mb.messages[i].buffer, &instrument, sizeof(instrument));
         i++;
     }
-    f.msgCount = i;
+    mb.msgCount = i;
     return 0;
 }
 
-void Sensor::printFlow(flow &f) {
+void Sensor::printFlow(MessageBlk &mb) {
     // loop through the messages and print as hexidecimal representations of octets
-    for (int i=0; (i < f.msgCount ) ; i++) {
-      transport->printMessage(&f.msgBlk[i], 32);
+    for (int i=0; (i < mb.msgCount ) ; i++) {
+      transport->printMessage(&mb.messages[i], 32);
       printf("\n\n ");
     }
 
     return;
 }
 
-int Sensor::getFlowMsgCount(flow &f) {
-    return f.msgCount;
+int Sensor::getFlowMsgCount(MessageBlk &mb) {
+    return mb.msgCount;
 }
 
-int Sensor::getFlowByteLength(flow &f) {
+int Sensor::getFlowByteLength(MessageBlk &mb) {
     int sumOfLengths = 0;
-    for (int i=0; (i < f.msgCount ) ; i++) {
-        sumOfLengths += f.msgBlk->bufferSize;
+    for (int i=0; (i < mb.msgCount ) ; i++) {
+        sumOfLengths += mb.messages[i].bufferSize;
     }
 
     return sumOfLengths;
 }
 
-int Sensor::getFlowMsgAvgSize(flow &f) {
+int Sensor::getFlowMsgAvgSize(MessageBlk &mb) {
     int sumOfLengths = 0;
-    for (int i=0; (i < f.msgCount ) ; i++) {
-        sumOfLengths += f.msgBlk->bufferSize;
+    for (int i=0; (i < mb.msgCount ) ; i++) {
+        sumOfLengths += mb.messages[i].bufferSize;
     }
-    return sumOfLengths/f.msgCount;
+    return sumOfLengths/mb.msgCount;
 }
 
-int Sensor::sendFlow(flow &f) {
-    if (0 != transport->push(f.msgBlk, f.msgCount)) {
+int Sensor::sendFlow(MessageBlk &mb) {
+    if (0 != transport->push(&mb, mb.msgCount)) {
         return -1;
     }
     return 0;

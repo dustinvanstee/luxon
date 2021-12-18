@@ -17,6 +17,14 @@ typedef struct
     uint8_t buffer[MSG_MAX_SIZE];
 } Message;
 
+typedef struct
+{
+    int blockId; //used to map to other resources maintained by the transport.
+    int msgCount;
+    eMsgBlkLocation memLocation;
+    Message* messages;
+} MessageBlk;
+
 
 class ITransport {
 
@@ -25,10 +33,10 @@ public:
     /*
      * Interface Methods
      */
-    virtual int push(Message* msgBlk, int numMsg) = 0;
-    virtual int pop(Message* msgBlk, int numReqMsg, int& numRetMsg) = 0;
-    virtual int createMessageBlock(Message* &msgBlk, eMsgBlkLocation dest) = 0;
-    virtual int freeMessageBlock(Message* msgBlk, eMsgBlkLocation dest) = 0;
+    virtual int push(MessageBlk* msgBlk, int numMsg) = 0;
+    virtual int pop(MessageBlk* msgBlk, int numReqMsg, int& numRetMsg) = 0;
+    virtual int createMessageBlock(MessageBlk* msgBlk, eMsgBlkLocation dest) = 0;
+    virtual int freeMessageBlock(MessageBlk* msgBlk, eMsgBlkLocation dest) = 0;
 
     /*
     * Interface Statics
@@ -104,25 +112,29 @@ protected:
 
     eTransportType              transportType;
 
-    int createMessageBlockHelper(Message* &msgBlk, eMsgBlkLocation dest) {
+    int createMessageBlockHelper(MessageBlk* &msgBlk, eMsgBlkLocation dest) {
         std::size_t msgSize = sizeof(Message);
+        msgBlk->msgCount = MSG_MAX_SIZE;
+        msgBlk->blockId = 0;
+        msgBlk->memLocation = dest;
+
         if (dest == eMsgBlkLocation::HOST) {
-            msgBlk = static_cast<Message *>(malloc(msgSize * MSG_BLOCK_SIZE));
+            msgBlk->messages = static_cast<Message *>(malloc(msgSize * MSG_BLOCK_SIZE));
         } else {
             //TODO : add code for device selection
             CUDA_CHECK(cudaMalloc((void **) &msgBlk, msgSize * MSG_BLOCK_SIZE));
         }
 
-        for(int i = 0; i < MSG_BLOCK_SIZE; i++) {
-            msgBlk[i].seqNumber = i;
-            msgBlk[i].interval = 0;
-            msgBlk[i].bufferSize = MSG_MAX_SIZE;
-            memset(msgBlk[i].buffer, PATTERN, MSG_MAX_SIZE);
+        for (int i = 0; i < MSG_BLOCK_SIZE; i++) {
+            msgBlk->messages[i].seqNumber = i;
+            msgBlk->messages[i].interval = 0;
+            msgBlk->messages[i].bufferSize = MSG_MAX_SIZE;
+            memset(msgBlk->messages[i].buffer, PATTERN, MSG_MAX_SIZE);
         }
         return 0;
     }
 
-    int freeMessageBlockHelper(Message* msgBlk, eMsgBlkLocation dest)
+    int freeMessageBlockHelper(MessageBlk* msgBlk, eMsgBlkLocation dest)
     {
         if (dest == eMsgBlkLocation::HOST) {
             free(msgBlk);

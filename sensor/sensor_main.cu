@@ -100,20 +100,18 @@ int main(int argc,char *argv[], char *envp[]) {
     //Create the Sensor
     Sensor s = Sensor(transport, dataSourceType);
 
-    flow f;
-    f.msgBlk = NULL;
-    f.msgCount = 0;
+    MessageBlk msgBlk;
 
     //Create the update flow based on the data source.
     switch(dataSourceType) {
         case eDataSourceType::PCAP:
-            s.createPCAPFlow(f, fileName);
+            s.createPCAPFlow(msgBlk, fileName);
             break;
         case eDataSourceType::RANDOM:
-            s.createRandomFlow(f, MSG_BLOCK_SIZE);
+            s.createRandomFlow(msgBlk, MSG_BLOCK_SIZE);
             break;
         case eDataSourceType::FINANCE:
-            s.createFinanceFlow(f, MSG_BLOCK_SIZE);
+            s.createFinanceFlow(msgBlk, MSG_BLOCK_SIZE);
             break;
         default :
             cout << "No valid data source" << endl;
@@ -121,20 +119,20 @@ int main(int argc,char *argv[], char *envp[]) {
             return -1;
     }
 
-    cout << "Sensor Flow has " << s.getFlowMsgCount(f) << " messages w/ avg size " << s.getFlowMsgAvgSize(f) << endl;
-    cout << "Sensor Flow total size is " << s.getFlowByteLength(f) << " bytes " << endl;
+    cout << "Sensor Flow has " << s.getFlowMsgCount(msgBlk) << " messages w/ avg size " << s.getFlowMsgAvgSize(msgBlk) << endl;
+    cout << "Sensor Flow total size is " << s.getFlowByteLength(msgBlk) << " bytes " << endl;
     cout << "sending flow for " << numIter << " iterations" << endl;
-    cout << "sending " << numIter * s.getFlowMsgCount(f) << " messages" << endl;
+    cout << "sending " << numIter * s.getFlowMsgCount(msgBlk) << " messages" << endl;
 
     long long sentMessages = 0;
-    int flowLength = s.getFlowMsgCount(f);
+    int flowLength = s.getFlowMsgCount(msgBlk);
 
     timer t_runTime;
 
     int i = 1; //First Iteration
     t_runTime.start();
     do {
-        if (0 != s.sendFlow(f))
+        if (0 != s.sendFlow(msgBlk))
         {
             cout << "Transport Error Sending sensor Flow - Exiting" << endl;
             return -1;

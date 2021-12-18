@@ -13,18 +13,16 @@
 
 #include "itransport.cuh"
 
-#define NUM_OPERATIONS  MSG_BLOCK_SIZE //Set this to same as the block size for other transports.
-
 class RdmaUdTransport: public ITransport {
 
 public:
     RdmaUdTransport(std::string localAddr, std::string mcastAddr, eTransportRole role);
     ~RdmaUdTransport();
 
-    int         push(Message* msgBlk, int numMsg) override;
-    int         pop(Message* msgBlk, int numReqMsg, int& numRetMsg) override;
-    int         createMessageBlock(Message* &msgBlk, eMsgBlkLocation dest) override;
-    int         freeMessageBlock(Message* msgBlk, eMsgBlkLocation dest) override;
+    int         push(MessageBlk* msgBlk, int numMsg) override;
+    int         pop(MessageBlk* msgBlk, int numReqMsg, int& numRetMsg) override;
+    int         createMessageBlock(MessageBlk* msgBlk, eMsgBlkLocation dest) override;
+    int         freeMessageBlock(MessageBlk* msgBlk, eMsgBlkLocation dest) override;
 
 private:
 
@@ -44,10 +42,9 @@ private:
     uint32_t 				    RemoteQkey;
 
     ibv_mr*                     mrMsgBlk;
-
-    ibv_send_wr                 dataSendWqe;
-    ibv_recv_wr                 dataRcvWqe;
-    ibv_wc                      dataWc;
+    ibv_send_wr                 sendWqe[MSG_BLOCK_SIZE];
+    ibv_recv_wr                 rcvWqe[MSG_BLOCK_SIZE];
+    ibv_wc                      cqe[MSG_BLOCK_SIZE];
 
 
     int         initSendWqe(ibv_send_wr*, int);

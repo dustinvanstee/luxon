@@ -9,27 +9,27 @@ PrintTransport::PrintTransport()
     this->transportType = eTransportType::PRINT;
 }
 
-int PrintTransport::push(Message* m, int numMsg)
+int PrintTransport::push(MessageBlk* m, int numMsg)
 {
     for(int i = 0; i < numMsg; i++)
     {
-        printMessage(&m[i], 32);
+        printMessage(&m->messages[i], 32);
     }
     return 0;
 }
 
-int PrintTransport::pop(Message* msgBlk, int numReqMsg, int& numRetMsg)
+int PrintTransport::pop(MessageBlk* msgBlk, int numReqMsg, int& numRetMsg)
 {
     numRetMsg = numReqMsg;
     return 0;
 }
 
-int PrintTransport::createMessageBlock(Message* &msgBlk, eMsgBlkLocation dest)
+int PrintTransport::createMessageBlock(MessageBlk* msgBlk, eMsgBlkLocation dest)
 {
     return createMessageBlockHelper(msgBlk, dest);
 }
 
-int PrintTransport::freeMessageBlock(Message* msgBlk, eMsgBlkLocation dest)
+int PrintTransport::freeMessageBlock(MessageBlk* msgBlk, eMsgBlkLocation dest)
 {
     return freeMessageBlockHelper(msgBlk, dest);
 }

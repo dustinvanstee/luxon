@@ -96,10 +96,10 @@ UdpTransport::UdpTransport(string localAddr, string mcastAddr, eTransportRole ro
 
 }
 
-int UdpTransport::push(Message* msgBlk, int numMsg)
+int UdpTransport::push(MessageBlk* msgBlk, int numMsg)
 {
     for(int i = 0; i < numMsg; i++) {
-        if (sendto(sockfd, (const char *) msgBlk[i].buffer, msgBlk[i].bufferSize, 0,
+        if (sendto(sockfd, (const char *) msgBlk->messages[i].buffer, msgBlk->messages[i].bufferSize, 0,
                    (const struct sockaddr *) &this->g_mcastAddr,
                    sizeof(this->g_mcastAddr)) <= 0) {
             cerr << "ERROR UdpTransport Push - failed sendto operation " << errno << endl;
@@ -108,13 +108,13 @@ int UdpTransport::push(Message* msgBlk, int numMsg)
         }
         DEBUG("To " << inet_ntoa(g_mcastAddr.sin_addr) << endl);
 #ifdef DEBUG_BUILD
-        printMessage(&msgBlk[0], 32);
+        printMessage(&messages[0], 32);
 #endif
     }
     return 0;
 }
 
-int UdpTransport::pop(Message* msgBlk, int numReqMsg, int& numRetMsg)
+int UdpTransport::pop(MessageBlk* msgBlk, int numReqMsg, int& numRetMsg)
 {
     int rc;
     sockaddr *name = NULL;
@@ -128,10 +128,10 @@ int UdpTransport::pop(Message* msgBlk, int numReqMsg, int& numRetMsg)
         rc = recvfrom(this->sockfd, &buffer, MSG_MAX_SIZE, 0, name, namelen);
 
         if (rc > 0) {
-            msgBlk[i].seqNumber = i;
-            msgBlk[i].interval = 0;
-            msgBlk[i].bufferSize = rc;
-            memcpy(msgBlk[i].buffer,buffer,rc); //TODO: smarter way than a copy?
+            msgBlk->messages[i].seqNumber = i;
+            msgBlk->messages[i].interval = 0;
+            msgBlk->messages[i].bufferSize = rc;
+            memcpy(msgBlk->messages[i].buffer,buffer,rc); //TODO: smarter way than a copy?
             numRetMsg = numRetMsg + 1;
         } else if(rc == -1) {
             cerr << "ERROR UdpTransport Pop - failed mcast socket read " << errno << endl;
@@ -145,12 +145,12 @@ int UdpTransport::pop(Message* msgBlk, int numReqMsg, int& numRetMsg)
     return 0;
 }
 
-int UdpTransport::createMessageBlock(Message* &msgBlk, eMsgBlkLocation dest)
+int UdpTransport::createMessageBlock(MessageBlk* msgBlk, eMsgBlkLocation dest)
 {
     return createMessageBlockHelper(msgBlk, dest);
 }
 
-int UdpTransport::freeMessageBlock(Message* msgBlk, eMsgBlkLocation dest)
+int UdpTransport::freeMessageBlock(MessageBlk* msgBlk, eMsgBlkLocation dest)
 {
     return freeMessageBlockHelper(msgBlk, dest);
 }
