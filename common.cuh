@@ -1,3 +1,5 @@
+// Change log
+// 121821 DV added a pt function for formatted print during normal runtime fixed DEBUG_BUILD logic 
 #ifndef LUXON_COMMON_CUH
 #define LUXON_COMMON_CUH
 
@@ -5,19 +7,23 @@
 #include <chrono>
 #include <nvtx3/nvToolsExt.h>
 
-//#define DEBUG_BUILD 0
+#define DEBUG_BUILD 0 // just set to 0 or 1 , dont comment out
 
-#ifdef DEBUG_BUILD 
-#define DEBUG(x) std::cerr << x
-#define DEBUG_DETAIL(x) x
-#define npt(fmt, ...) \
+#if DEBUG_BUILD > 0
+    #define DEBUG(x) std::cerr << x
+    #define DEBUG_DETAIL(x) x
+    #define npt(fmt, ...) \
         do { if (DEBUG_BUILD) fprintf(stderr, "%s:%d:%s(): " fmt, __FILE__, \
                                 __LINE__, __func__, __VA_ARGS__); } while (0)
 #else
-#  define DEBUG(x) do {} while (0)
-#  define DEBUG_DETAIL(x) do {} while (0)
-#  define npt(fmt, ...) do {} while (0)
+    #define DEBUG(x) do {} while (0)
+    #define DEBUG_DETAIL(x) do {} while (0)
+    #define npt(fmt, ...) do {} while (0)
 #endif
+// Use npt for debug printing, use pt for nice formatted print with line numbers and file name
+#define pt(fmt, ...) \
+        do { fprintf(stderr, "%s:%d:%s(): " fmt, __FILE__, \
+                                __LINE__, __func__, __VA_ARGS__); } while (0)
 
 #define PRINT_UPDATE_DELAY 1    //Used with timer
 

@@ -1,8 +1,12 @@
+# Change Log
+# 121821 DV added header files to target lines to trigger rebuild if header changes
+
 CXXCUDA=/usr/local/cuda-11.4/bin/nvcc
 LIBS = -libverbs -lrdmacm -lcuda -lpcap # -lcudart
 
 OBJ=$(wildcard lib/*.o)
 DHEADERS=$(shell echo */*cuh)
+
 
 all: bin/sensor-debug bin/processor-debug
 p: bin/processor-debug
@@ -13,16 +17,16 @@ p: bin/processor-debug
 lib/libtransport.a: lib/none_transport.o lib/print_transport.o lib/udp_transport.o lib/rdma_ud_transport.o
 	ar r lib/libtransport.a lib/none_transport.o lib/print_transport.o lib/udp_transport.o lib/rdma_ud_transport.o
 
-lib/none_transport.o: transport/udp_transport.cu
+lib/none_transport.o: transport/udp_transport.cu transport/itransport.cuh common.cuh
 	$(CXXCUDA) -c -g -o lib/none_transport.o transport/none_transport.cu
 
-lib/print_transport.o: transport/udp_transport.cu
+lib/print_transport.o: transport/udp_transport.cu transport/itransport.cuh common.cuh
 	$(CXXCUDA) -c -g -o lib/print_transport.o transport/print_transport.cu
 
-lib/udp_transport.o: transport/udp_transport.cu
+lib/udp_transport.o: transport/udp_transport.cu transport/itransport.cuh common.cuh
 	$(CXXCUDA) -c -g -o lib/udp_transport.o transport/udp_transport.cu
 
-lib/rdma_ud_transport.o: transport/rdma_ud_transport.cu
+lib/rdma_ud_transport.o: transport/rdma_ud_transport.cu transport/itransport.cuh common.cuh
 	$(CXXCUDA) -c -g -o lib/rdma_ud_transport.o transport/rdma_ud_transport.cu
 
 # $@ is the name of target:wildcard

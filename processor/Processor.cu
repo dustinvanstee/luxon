@@ -1,7 +1,3 @@
-//
-// Created by alex on 7/15/20.
-//
-
 #include "Processor.cuh"
 
 inline cudaError_t checkCuda(cudaError_t result)
@@ -58,8 +54,8 @@ void Processor::procCountZerosGPU(int minMessageToProcess) {
     int deviceId;
     int numberOfSMs;
 
-    cudaGetDevice(&deviceId);
-    cudaDeviceGetAttribute(&numberOfSMs, cudaDevAttrMultiProcessorCount, deviceId);
+    CUDA_CHECK( cudaGetDevice(&deviceId));
+    CUDA_CHECK( cudaDeviceGetAttribute(&numberOfSMs, cudaDevAttrMultiProcessorCount, deviceId));
 
     size_t threadsPerBlock;
     size_t numberOfBlocks;
@@ -71,7 +67,8 @@ void Processor::procCountZerosGPU(int minMessageToProcess) {
     int processedMessages = 0;
     int sum =0;
 
-    Message* msgBlk;//Create array that is max message block size
+    Message* msgBlk = NULL;//Create array that is max message block size
+
     if(!transport->createMessageBlock(msgBlk, eMsgBlkLocation::DEVICE)){
         // print error messge
     }
@@ -91,7 +88,6 @@ void Processor::procCountZerosGPU(int minMessageToProcess) {
 
         if(msgCountReturned > 0) //If there are new messages process them
         {
-            std::cerr << "\rProcessed " << processedMessages << " messages";
             gpu_count_zeros <<< numberOfBlocks, threadsPerBlock >>>(msgBlk, blockSum, msgCountReturned);
 
             checkCuda( cudaGetLastError() );
@@ -106,6 +102,8 @@ void Processor::procCountZerosGPU(int minMessageToProcess) {
             }
 
             processedMessages += msgCountReturned;
+            pt("GPU Loop processing complete.  Processed %d messages.\n", processedMessages );
+
         }
         //m.clear();
         msgCountReturned=0;
@@ -154,7 +152,7 @@ int Processor::procCountZerosCPU(int minMessageToProcess) {
     //Free the receive buffer
     for(int i = 0; i < MSG_BLOCK_SIZE; i++)
     {
-        transport->freeMessage(&msgBlk[i]);
+        transport->freeMessageBlock(&msgBlk[i],eMsgBlkLocation::HOST) ;
     }
 
     std::cout << "\nProcessing Completed: " << std::endl;
@@ -194,7 +192,7 @@ void Processor::procDropMsg(int minMessageToProcess) {
     //Free the receive buffer
     for(int i = 0; i < MSG_BLOCK_SIZE; i++)
     {
-        transport->freeMessage(&msgBlk[i]);
+        transport->freeMessageBlock(&msgBlk[i],eMsgBlkLocation::DEVICE);
     }
 
     std::cout << "\nProcessing Completed: " << std::endl;
@@ -230,7 +228,7 @@ int Processor::procPrintMessages(int minMessageToProcess) {
     //Free the receive buffer
     for(int i = 0; i < MSG_BLOCK_SIZE; i++)
     {
-        transport->freeMessage(&msgBlk[i]);
+        transport->freeMessageBlock(&msgBlk[i],eMsgBlkLocation::HOST);
     }
 
     //Simple process (i.e. print)

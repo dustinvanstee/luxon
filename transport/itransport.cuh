@@ -103,14 +103,15 @@ protected:
     int                         sockfd;
 
     eTransportType              transportType;
-
+    
     int createMessageBlockHelper(Message* &msgBlk, eMsgBlkLocation dest) {
+        npt("Debug Version %d", 4);
         std::size_t msgSize = sizeof(Message);
         if (dest == eMsgBlkLocation::HOST) {
             msgBlk = static_cast<Message *>(malloc(msgSize * MSG_BLOCK_SIZE));
         } else {
             //TODO : add code for device selection
-            CUDA_CHECK(cudaMalloc((void **) &msgBlk, msgSize * MSG_BLOCK_SIZE));
+            CUDA_CHECK(cudaMallocManaged((void **) &msgBlk, msgSize * MSG_BLOCK_SIZE));
         }
 
         for(int i = 0; i < MSG_BLOCK_SIZE; i++) {
