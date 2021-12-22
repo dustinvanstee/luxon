@@ -1,4 +1,5 @@
 #include "Processor.cuh"
+#include "../data/data_sample_finance.cuh"
 
 //inline cudaError_t chceckCuda(cudaError_t result)
 //{
@@ -28,6 +29,8 @@ __global__ void gpu_count_zeros(Message* flow, int* sum, int flowLength)
 }
 
 
+
+
 void cpu_count_zeros(Message* flow, int& sum, int flowLength)
 {
     for(int i = 0; i < flowLength; i++)
@@ -43,12 +46,22 @@ void cpu_count_zeros(Message* flow, int& sum, int flowLength)
     }
 }
 
-
-Processor::Processor(ITransport* t) {
-    transport = t;
+void Processor::initializeMsgBlk() {
+   this->msgBlkPtr=  static_cast<MessageBlk *>(malloc(sizeof(MessageBlk))); 
+   if(transport->createMessageBlock(msgBlkPtr, eMsgBlkLocation::DEVICE)){
+        // print error messge
+        fprintf(stderr, "Processor::initializeMsgBlk(): memory allocation error\n");
+        exit(EXIT_FAILURE); 
+    } 
 }
 
-void Processor::procCountZerosGPU(int minMessageToProcess) {
+
+Processor::Processor(ITransport* t,  eDataSourceType dataSourceType) {
+    this->transport = t;
+    this->dataSourceType = dataSourceType;
+}
+
+int Processor::procCountZerosGPU(int minMessageToProcess) {
     timer t;
 
     int deviceId;
@@ -67,12 +80,7 @@ void Processor::procCountZerosGPU(int minMessageToProcess) {
     int processedMessages = 0;
     int sum =0;
 
-    MessageBlk msgBlk;
-    MessageBlk* pmsgBlk = &msgBlk; //This is hacky, probably better to refactor createMessageblcok to pass by reference.
-
-    if(!transport->createMessageBlock(pmsgBlk, eMsgBlkLocation::DEVICE)){
-        // print error messge
-    }
+    this->initializeMsgBlk();
 
     int* blockSum;   //Array with sum of zeros for this message
     size_t sumArraySize = MSG_BLOCK_SIZE * sizeof(int);
@@ -81,15 +89,15 @@ void Processor::procCountZerosGPU(int minMessageToProcess) {
 
     while (processedMessages < minMessageToProcess) {
 
-        if (0 != transport->pop(pmsgBlk, MSG_BLOCK_SIZE, msgCountReturned)) {
+        if (0 != transport->pop(msgBlkPtr, MSG_BLOCK_SIZE, msgCountReturned)) {
             exit(EXIT_FAILURE);
         }
 
-        CUDA_CHECK(cudaMemPrefetchAsync(msgBlk.messages, MSG_BLOCK_SIZE*sizeof(Message), deviceId));
+        CUDA_CHECK(cudaMemPrefetchAsync(this->msgBlkPtr->messages, MSG_BLOCK_SIZE*sizeof(Message), deviceId));
 
         if(msgCountReturned > 0) //If there are new messages process them
         {
-            gpu_count_zeros <<< numberOfBlocks, threadsPerBlock >>>(msgBlk.messages, blockSum, msgCountReturned);
+            gpu_count_zeros <<< numberOfBlocks, threadsPerBlock >>>(this->msgBlkPtr->messages, blockSum, msgCountReturned);
 
             CUDA_CHECK( cudaGetLastError() );
             CUDA_CHECK( cudaDeviceSynchronize() ); //Wait for GPU threads to complete
@@ -108,17 +116,15 @@ void Processor::procCountZerosGPU(int minMessageToProcess) {
         }
         //m.clear();
         msgCountReturned=0;
-
     }
 
-    CUDA_CHECK( cudaFree(msgBlk.messages));
+   
     CUDA_CHECK( cudaFree(blockSum));
 
     std::cout << "\n Processing Completed: " << std::endl;
     std::cout << "\t processed " << processedMessages << " in " << t.seconds_elapsed() << " sec" << std::endl;
     std::cout << "\t total zero's in messages = " << sum << std::endl;
-
-    exit(EXIT_SUCCESS);
+    return 0;
 }
 
 int Processor::procCountZerosCPU(int minMessageToProcess) {
@@ -161,7 +167,7 @@ int Processor::procCountZerosCPU(int minMessageToProcess) {
     std::cout << "\nProcessing Completed: " << std::endl;
     std::cout << "\t processed " << processedMessages << " in " << t.seconds_elapsed() << " sec" << std::endl;
     std::cout << "\t total zero's in messages = " << sum << std::endl;
-    exit(EXIT_SUCCESS);
+    return 0;
 }
 
 void Processor::procDropMsg(int minMessageToProcess) {
@@ -193,12 +199,6 @@ void Processor::procDropMsg(int minMessageToProcess) {
 
     }
     t.stop();
-
-    //Free the receive buffer
-    for(int i = 0; i < MSG_BLOCK_SIZE; i++)
-    {
-        transport->freeMessageBlock(pmsgBlk,eMsgBlkLocation::DEVICE);
-    }
 
     std::cout << "\nProcessing Completed: " << std::endl;
     std::cout << "\t processed " << processedMessages << " in " << t.seconds_elapsed() << " sec" << std::endl;
@@ -232,13 +232,34 @@ int Processor::procPrintMessages(int minMessageToProcess) {
         }
     } while (processedCount < minMessageToProcess);
 
-    //Free the receive buffer
-    for(int i = 0; i < MSG_BLOCK_SIZE; i++)
-    {
-        transport->freeMessageBlock(pmsgBlk,eMsgBlkLocation::HOST);
-    }
 
     //Simple process (i.e. print)
     std::cout << "Processing Completed: found " << processedCount << " messages" << std::endl;
     exit(EXIT_SUCCESS);
+}
+
+int Processor::freeMemory() {
+    //TODO : could refactor freeMessageBlock just to take message block ptr, as the structure contains memlocation..
+    int rv {0};
+    eMsgBlkLocation location {this->msgBlkPtr->memLocation};
+    this->transport->freeMessageBlock(this->msgBlkPtr, location); 
+    return rv;
+}
+
+// Goal of this function is to render buffer in fairly agnostic way using data source implementations...
+void Processor::summarizeBuffer() {
+    /* 
+    1. get point to current message buffer
+    2. send buffer to data class to render buffer in a formatted way.  Good for checking and making sure things work properly
+    */
+
+    // msgBlkPtr is my message buffer
+    //if finance 
+    if(this->dataSourceType == eDataSourceType::FINANCE) {
+        MarketData marketData;
+        marketData.summarizeBuffer(this->msgBlkPtr);
+    } else {
+        fprintf(stderr, "summarizeBuffer Not implemented for %s!\n", IDataSource::DataSourceTypeToStr(this->dataSourceType).c_str());
+        exit(EXIT_FAILURE);
+    }
 }

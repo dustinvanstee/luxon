@@ -1,3 +1,6 @@
+// Change log
+// 122021 DV added dataSourceType to processor to rendor output buffer in semi-standard way
+
 #include "Processor.cuh"
 
 #include <iostream>
@@ -9,7 +12,7 @@
 
 
 #define MIN_MSG_TO_PRINT    100
-#define MIN_MSG_TO_PROCESS  10'000'000  //CPU count our GPU count
+#define MIN_MSG_TO_PROCESS  10'000  //CPU count our GPU count
 
 
 void PrintUsage()
@@ -35,11 +38,16 @@ int main(int argc,char *argv[], char *envp[]) {
 
     eTransportType transportType;
     ITransport* transport;
+    IDataSource* dataSource;
+    eDataSourceType dataSourceType = eDataSourceType::UNKNOWN;
 
     while ((op = getopt(argc, argv, "m:s:l:t:")) != -1) {
         switch (op) {
             case 'l':
                 localAddr = optarg;
+                break;
+            case 's':
+                dataSourceType = dataSource->strToDataSourceType(optarg);
                 break;
             case 'm':
                 mode = optarg;
@@ -77,6 +85,7 @@ int main(int argc,char *argv[], char *envp[]) {
     cout << "Mcast Group Address: " << mcastAddr << endl;
     cout << "Processor Mode: " << mode << endl;
     cout << "Transport Mode: " << tmode << endl;
+    cout << "Data Source   : " << IDataSource::DataSourceTypeToStr(dataSourceType) << endl;
 
 
     //Create the Transport
@@ -93,7 +102,7 @@ int main(int argc,char *argv[], char *envp[]) {
             return -1;
     }
 
-    Processor p = Processor(transport);
+    Processor p = Processor(transport, dataSourceType);
 
     if(mode == "PRINT")
     {
@@ -115,6 +124,9 @@ int main(int argc,char *argv[], char *envp[]) {
         cout << "This processor will count zeros in " << MIN_MSG_TO_PROCESS << " msg using the GPU" << endl;
         p.procCountZerosGPU(MIN_MSG_TO_PROCESS);
     }
+
+    p.summarizeBuffer();
+    p.freeMemory();
 
     return 0;
 }

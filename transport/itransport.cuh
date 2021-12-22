@@ -87,6 +87,25 @@ public:
         std::cout << std::endl;
     }
 
+    static std::string toString(MessageBlk *m) {
+        std::string rv;
+        rv =  "blockId    :" + std::to_string(m->blockId) + "\n";
+        rv += "msgCount   :" + std::to_string(m->msgCount) + "\n";
+        //rv += "memLocation:" + std::to_string(static_cast<int>( m->memLocation)) + "\n";
+        rv += "interval   :" + std::to_string(m->messages->interval) + "\n";
+        rv += "bufferSize :" + std::to_string(m->messages->bufferSize) + "\n";
+        rv += "seqNumber  :" + std::to_string(m->messages->seqNumber) + "\n";
+
+        char bufferp[10];
+        for(int i=0; i<5; i++) {
+            sprintf(&bufferp[i*2], "%02hhX ", m->messages->buffer[i]);
+        }
+        rv += "Buffer[0:10]: " + std::string(bufferp) + "\n";
+        
+        return rv;
+    }
+
+
     /*
      * Accessor Methods
      */
@@ -98,6 +117,8 @@ public:
     std::string printType() {
        return this->TransportTypeToStr(this->transportType);
     }
+
+
     
 
 protected:
@@ -141,7 +162,7 @@ protected:
             free(msgBlk);
         } else {
             //TODO : add code for device selection
-            CUDA_CHECK(cudaFree(msgBlk));
+            CUDA_CHECK(cudaFree(msgBlk->messages));
         }
         return 0;
     }
