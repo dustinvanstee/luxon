@@ -3,7 +3,7 @@
 
 #include <netinet/in.h>
 
-#define PATTERN 0xFEED
+#define DEFAULT_PATTERN 0xFEED
 
 enum class eMsgBlkLocation {HOST, DEVICE};
 enum class eTransportType {UDP, RDMA_UD, PRINT, NONE, UNKNOWN};
@@ -134,7 +134,7 @@ protected:
     eTransportType              transportType;
 
     int createMessageBlockHelper(MessageBlk* &msgBlk, eMsgBlkLocation dest) {
-        npt("Debug Version %d", 4);
+        npt("Debug Version %d\n", 4);
         std::size_t msgSize = sizeof(Message);
         msgBlk->msgCount = MSG_MAX_SIZE;
         msgBlk->blockId = 0;
@@ -151,7 +151,7 @@ protected:
             msgBlk->messages[i].seqNumber = i;
             msgBlk->messages[i].interval = 0;
             msgBlk->messages[i].bufferSize = MSG_MAX_SIZE;
-            memset(msgBlk->messages[i].buffer, PATTERN, MSG_MAX_SIZE);
+            memset(msgBlk->messages[i].buffer, DEFAULT_PATTERN, MSG_MAX_SIZE);
         }
         return 0;
     }
