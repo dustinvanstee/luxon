@@ -1,17 +1,8 @@
-#include "Sensor.cuh"
-
 #include <iostream>
 #include <unistd.h>
 #include <chrono>
 
-#include "../common.cuh"
-#include "../data/idataSource.cuh"
-#include "../data/data_sample_finance.cuh"
-#include "../transport/itransport.cuh"
-#include "../transport/print_transport.cuh"
-#include "../transport/none_transport.cuh"
-#include "../transport/udp_transport.cuh"
-#include "../transport/rdma_ud_transport.cuh"
+#include "Sensor.cuh"
 
 void PrintUsage()
 {
@@ -110,6 +101,9 @@ int main(int argc,char *argv[], char *envp[]) {
             break;
         case eDataSourceType::RANDOM:
             s.createRandomFlow(msgBlk, MSG_BLOCK_SIZE);
+            break;
+        case eDataSourceType::PAT:
+            s.createPatternFlow(msgBlk, MSG_BLOCK_SIZE);
             break;
         case eDataSourceType::FINANCE:
             s.createFinanceFlow(msgBlk, MSG_BLOCK_SIZE);

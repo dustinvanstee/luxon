@@ -42,7 +42,9 @@ int RdmaUdTransport::createMessageBlock(MessageBlk* msgBlk, eMsgBlkLocation dest
         for(int i = 0; i < MSG_BLOCK_SIZE; i++)
         {
             initSendWqe(&sendWqe[i], i);
-            if(i<MSG_BLOCK_SIZE) {
+            if(i == MSG_BLOCK_SIZE-1) { //There is no next block set to NULL
+                sendWqe[i].next = NULL;
+            } else {
                 sendWqe[i].next = &sendWqe[i + 1];
             }
             updateSendWqe(&sendWqe[i], &msgBlk->messages[0], MSG_MAX_SIZE, mrMsgBlk);
@@ -130,15 +132,20 @@ int RdmaUdTransport::push(MessageBlk* m, int numMsg)
     do {
         err = ibv_post_send(g_CMId->qp, sendWqe, &bad_wqe);
 
-        fprintf(stderr, "ERROR: post_SEND_WQE Error %u\n", err);
-        if (err == ENOMEM) //Queue Full Wait for CQ Polling Thread to Clear
+        //Error Handling BLock for Post Send
+        if (err != 0)
         {
-            fprintf(stderr, "ERROR: Send Queue Full Retry %u of 10\n", ret);
-            usleep(100); //Wait 100 Microseconds, max of 1 msec
-        } else {
-            fprintf(stderr, "ERROR: Unrecoverable Send Queue, aborting\n");
-            return -1;
+            fprintf(stderr, "ERROR: post_SEND_WQE Error %u\n", err);
+            if (err == ENOMEM) //Queue Full Wait for CQ Polling Thread to Clear
+            {
+                fprintf(stderr, "ERROR: Send Queue Full Retry %u of 10\n", ret);
+                usleep(100); //Wait 100 Microseconds, max of 1 msec
+            } else {
+                fprintf(stderr, "ERROR: Unrecoverable Send Queue, aborting\n");
+                return -1;
+            }
         }
+
     } while(err != 0);
 
     for(int i = 0; i < numMsg; i++) {
@@ -408,7 +415,7 @@ int RdmaUdTransport::RDMACreateQP()
 
     /*Create a completion Queue */
     //g_cq = ibv_create_cq(g_CMId->verbs, NUM_OPERATIONS, NULL, NULL, 0);
-    g_cq = ibv_create_cq(g_CMId->verbs, 5, NULL, NULL, 1);
+    g_cq = ibv_create_cq(g_CMId->verbs, MSG_BLOCK_SIZE, NULL, NULL, 1);
     if(!g_cq)
     {
         fprintf(stderr, "ERROR: RDMACreateQP - Couldn't create completion queue\n");
@@ -423,8 +430,8 @@ int RdmaUdTransport::RDMACreateQP()
     //qp_init_attr.sq_sig_all = 0;
     qp_init_attr.send_cq = g_cq;
     qp_init_attr.recv_cq = g_cq;
-    qp_init_attr.cap.max_send_wr = MSG_BLOCK_SIZE;
-    qp_init_attr.cap.max_recv_wr = MSG_BLOCK_SIZE;
+    qp_init_attr.cap.max_send_wr = 10*MSG_BLOCK_SIZE;
+    qp_init_attr.cap.max_recv_wr = 10*MSG_BLOCK_SIZE;
     qp_init_attr.cap.max_send_sge = 1;
     qp_init_attr.cap.max_recv_sge = 1;
 

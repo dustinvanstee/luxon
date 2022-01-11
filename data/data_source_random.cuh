@@ -10,10 +10,10 @@
 #define RAND_BLOCK_SIZE 1776     //Size of the Data in a random block
 #define RAND_BLOCK_COUNT 1024    //Number of Messages in the Flow
 
-struct Block {
+struct randomBlock {
     char buffer[RAND_BLOCK_SIZE];
     int  bufferSize;
-} typedef block_t;
+} typedef randomBlock_t;
 
 class RandomData : public IDataSource {
 public:
@@ -22,7 +22,7 @@ public:
         this->dataSourceType = eDataSourceType::RANDOM;
 
         for (int i = 0; i < RAND_BLOCK_COUNT; ++i) {
-            block_t b;
+            randomBlock_t b;
             b.bufferSize = RAND_BLOCK_SIZE;
             for (int j = 0; j < RAND_BLOCK_SIZE; ++j) {
                 int r = (uint8_t)((rand() % 256) + 1);
@@ -33,21 +33,21 @@ public:
     }// Constructor declaration
 
     //Creates a random set of updates for the market data instruments, and puts them in a flow for sending.
-    std::vector<block_t> createRandomUpdate(int numMsg)
+    std::vector<randomBlock_t> createRandomUpdate(int numMsg)
     {
-        std::vector<block_t> update;
+        std::vector<randomBlock_t> update;
         for(int j = 0; j < numMsg; j++)
         {
-            block_t b = randomBlocks[(uint8_t)(rand()%RAND_BLOCK_COUNT)];
+            randomBlock_t b = randomBlocks[(uint8_t)(rand()%RAND_BLOCK_COUNT)];
             update.push_back(b);
         }
         return update;
     }
 
 private:
-    std::vector<block_t> randomBlocks;
+    std::vector<randomBlock_t> randomBlocks;
 
 };
 
 
-#endif //LUXON_FINANCE_MSG_CUH
+#endif //LUXON_DATA_SOURCE_RANDOM_CUH
