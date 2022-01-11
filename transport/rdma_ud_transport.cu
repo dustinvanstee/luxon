@@ -41,7 +41,9 @@ int RdmaUdTransport::createMessageBlock(MessageBlk* msgBlk, eMsgBlkLocation dest
         for(int i = 0; i < MSG_BLOCK_SIZE; i++)
         {
             initSendWqe(&sendWqe[i], i);
-            if(i<MSG_BLOCK_SIZE) {
+            if(i == MSG_BLOCK_SIZE-1) { //There is no next block set to NULL
+                sendWqe[i].next = NULL;
+            } else {
                 sendWqe[i].next = &sendWqe[i + 1];
             }
             updateSendWqe(&sendWqe[i], &msgBlk->messages[0], MSG_MAX_SIZE, mrMsgBlk);
@@ -122,20 +124,23 @@ int RdmaUdTransport::push(MessageBlk* m, int numMsg)
         sendWqe[numMsg].next = NULL; //Stop sending after numMsgs.
     }
 
-    usleep(5000); //Wait 5 Seconds
-
     do {
         err = ibv_post_send(g_CMId->qp, sendWqe, &bad_wqe);
 
-        fprintf(stderr, "ERROR: post_SEND_WQE Error %u\n", err);
-        if (err == ENOMEM) //Queue Full Wait for CQ Polling Thread to Clear
+        //Error Handling BLock for Post Send
+        if (err != 0)
         {
-            fprintf(stderr, "ERROR: Send Queue Full Retry %u of 10\n", ret);
-            usleep(100); //Wait 100 Microseconds, max of 1 msec
-        } else {
-            fprintf(stderr, "ERROR: Unrecoverable Send Queue, aborting\n");
-            return -1;
+            fprintf(stderr, "ERROR: post_SEND_WQE Error %u\n", err);
+            if (err == ENOMEM) //Queue Full Wait for CQ Polling Thread to Clear
+            {
+                fprintf(stderr, "ERROR: Send Queue Full Retry %u of 10\n", ret);
+                usleep(100); //Wait 100 Microseconds, max of 1 msec
+            } else {
+                fprintf(stderr, "ERROR: Unrecoverable Send Queue, aborting\n");
+                return -1;
+            }
         }
+
     } while(err != 0);
 
     for(int i = 0; i < numMsg; i++) {
