@@ -27,6 +27,7 @@ int get_addr(const char *dst, struct sockaddr *addr)
 
 int RdmaUdTransport::createMessageBlock(MessageBlk* msgBlk, eMsgBlkLocation dest)
 {
+    npt("%s:", "TRACE\n");
 
     if (dest == eMsgBlkLocation::HOST) {
         if(0 != createMessageBlockHelper(msgBlk, dest))
@@ -62,12 +63,14 @@ int RdmaUdTransport::createMessageBlock(MessageBlk* msgBlk, eMsgBlkLocation dest
 
 int RdmaUdTransport::freeMessageBlock(MessageBlk* msgBlk, eMsgBlkLocation dest)
 {
+    npt("%s:", "TRACE\n");
     return freeMessageBlockHelper(msgBlk, dest);
 }
 
 
 RdmaUdTransport::RdmaUdTransport(std::string localAddr, std::string mcastAddr, eTransportRole role) {
     this->transportType = eTransportType::RDMA_UD;
+    npt("%s:", "TRACE\n");
 
     s_localAddr = localAddr;
     s_mcastAddr = mcastAddr;
@@ -106,6 +109,7 @@ RdmaUdTransport::RdmaUdTransport(std::string localAddr, std::string mcastAddr, e
 }
 
 RdmaUdTransport::~RdmaUdTransport() {
+    npt("%s:", "TRACE\n");
     //Clean the RDMA Contexts
     DestroyContext();
     DestroyQP();
@@ -115,6 +119,7 @@ RdmaUdTransport::~RdmaUdTransport() {
 
 int RdmaUdTransport::push(MessageBlk* m, int numMsg)
 {
+    npt("%s:", "TRACE\n");
     int err;
     int ret = 0;
     struct ibv_send_wr *bad_wqe = NULL;
@@ -152,8 +157,8 @@ int RdmaUdTransport::push(MessageBlk* m, int numMsg)
             ret = ibv_poll_cq(g_cq, 1, &cqe[0]);
         } while (ret == 0);
         DEBUG("DEBUG: Received " << ret << " CQE Elements\n");
-        DEBUG("DEBUG: WRID(" << cqe[0].wr_id << ")\tStatus(" << cqe[0].status << ") length( " << cqe[0].byte_len
-                             << ")\n");
+        //DEBUG("DEBUG: WRID(" << cqe.wr_id << ")\tStatus(" << cqe.status << ") length( " << cqe.byte_len
+        //                     << ")\n");
 
         if (cqe[0].status == IBV_WC_RNR_RETRY_EXC_ERR) {
             usleep(50); //wait 50 us and we will try again.
@@ -179,6 +184,7 @@ int RdmaUdTransport::pop(MessageBlk* msgBlk, int numReqMsg, int& numRetMsg)
 {
     numRetMsg = 0;
     Message* msg = NULL;
+    npt("%s:", "TRACE\n");
 
     do {
         //Post the RcvWQE
@@ -198,9 +204,9 @@ int RdmaUdTransport::pop(MessageBlk* msgBlk, int numReqMsg, int& numRetMsg)
 
         for (int j = 0; j < r; j++) {
             DEBUG ("test");
-            DEBUG("DEBUG: WRID(" << cqe[j].wr_id <<
-                                 ")\tStatus(" << cqe[j].status << ")" <<
-                                 ")\tSize(" << cqe[j].byte_len << ")\n");
+            //DEBUG("DEBUG: WRID(" << cqe.wr_id <<
+            //                     ")\tStatus(" << cqe.status << ")" <<
+            //                     ")\tSize(" << cqe.byte_len << ")\n");
         }
 
         *msg->buffer += 40;
@@ -223,6 +229,7 @@ int RdmaUdTransport::pop(MessageBlk* msgBlk, int numReqMsg, int& numRetMsg)
 int RdmaUdTransport::initSendWqe(ibv_send_wr* wqe, int i)
 {
     struct ibv_sge *sge;
+    npt("%s:", "TRACE\n");
 
     //wqe = (ibv_send_wr *)malloc(sizeof(ibv_send_wr));
     sge = (ibv_sge *)malloc(sizeof(ibv_sge));
@@ -245,6 +252,7 @@ int RdmaUdTransport::initSendWqe(ibv_send_wr* wqe, int i)
 
 int RdmaUdTransport::updateSendWqe(ibv_send_wr* wqe, void* buffer, size_t bufferlen, ibv_mr* bufferMemoryRegion)
 {
+    npt("%s wr_id :%lu \n", "TRACE", wqe->wr_id);
     wqe->sg_list->addr = (uintptr_t)buffer;
     wqe->sg_list->length = bufferlen;
     wqe->sg_list->lkey = bufferMemoryRegion->lkey;
@@ -254,6 +262,7 @@ int RdmaUdTransport::updateSendWqe(ibv_send_wr* wqe, void* buffer, size_t buffer
 int RdmaUdTransport::initRecvWqe(ibv_recv_wr* wqe, int id)
 {
     struct ibv_sge *sge;
+    npt("%s:", "TRACE\n");
 
     sge = (ibv_sge *)malloc(sizeof(ibv_sge));
 
@@ -268,7 +277,7 @@ int RdmaUdTransport::initRecvWqe(ibv_recv_wr* wqe, int id)
 }
 
 int RdmaUdTransport::updateRecvWqe(ibv_recv_wr *wqe, void *buffer, size_t bufferlen, ibv_mr *bufferMemoryRegion) {
-
+    npt("%s:", "TRACE\n");
     wqe->sg_list->addr = (uintptr_t)buffer;
     wqe->sg_list->length = bufferlen;
     wqe->sg_list->lkey = bufferMemoryRegion->lkey;
@@ -277,6 +286,7 @@ int RdmaUdTransport::updateRecvWqe(ibv_recv_wr *wqe, void *buffer, size_t buffer
 
 int RdmaUdTransport::post_RECEIVE_WQE(ibv_recv_wr* ll_wqe)
 {
+    npt("%s:", "TRACE\n");
     DEBUG("DEBUG: Enter post_RECEIVE_WQE\n");
     int ret;
     struct ibv_recv_wr *bad_wqe = NULL;
@@ -294,6 +304,7 @@ int RdmaUdTransport::post_RECEIVE_WQE(ibv_recv_wr* ll_wqe)
 
 ibv_mr* RdmaUdTransport::create_MEMORY_REGION(void* buffer, size_t bufferlen)
 {
+    npt("%s:", "TRACE\n");
     ibv_mr* tmpmr = (ibv_mr*)malloc(sizeof(ibv_mr));
     int mr_flags = IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_READ | IBV_ACCESS_REMOTE_WRITE;
     tmpmr = ibv_reg_mr(g_pd, buffer, bufferlen, mr_flags);
@@ -303,10 +314,8 @@ ibv_mr* RdmaUdTransport::create_MEMORY_REGION(void* buffer, size_t bufferlen)
         return NULL;
     }
 
-#ifdef DEBUG_BUILD
-    fprintf(stderr, "DEBUG: Memory Region was registered with addr=%p, lkey=0x%x, rkey=0x%x, flags=0x%x\n",
+    npt("DEBUG: Memory Region was registered with addr=%p, lkey=0x%x, rkey=0x%x, flags=0x%x\n",
             buffer, tmpmr->lkey, tmpmr->rkey, mr_flags);
-#endif
 
     return tmpmr;
 }
@@ -318,6 +327,7 @@ int RdmaUdTransport::RDMACreateContext()
 {
     int ret;
     struct rdma_cm_event *CMEvent;
+    npt("%s:", "TRACE\n");
 
     // Open a Channel to the Communication Manager used to receive async events from the CM.
     g_CMEventChannel = rdma_create_event_channel();
@@ -387,6 +397,7 @@ int RdmaUdTransport::RDMACreateContext()
 
 int RdmaUdTransport::RDMACreateQP()
 {
+    npt("%s:", "TRACE\n");
     int ret;
     struct ibv_qp_init_attr qp_init_attr;
 
@@ -436,6 +447,7 @@ int RdmaUdTransport::RDMACreateQP()
 
 int RdmaUdTransport::RdmaMcastConnect()
 {
+    npt("%s:", "TRACE\n");
     int ret;
     struct rdma_cm_event *CMEvent;
 
@@ -481,6 +493,7 @@ int RdmaUdTransport::RdmaMcastConnect()
 
 void RdmaUdTransport::DestroyContext()
 {
+    npt("%s:", "TRACE\n");
     if(g_CMEventChannel != NULL)
     {
         rdma_destroy_event_channel(g_CMEventChannel);
@@ -497,6 +510,7 @@ void RdmaUdTransport::DestroyContext()
 
 void RdmaUdTransport::DestroyQP()
 {
+    npt("%s:", "TRACE\n");
     if(g_pd != NULL)
     {
         if(ibv_dealloc_pd(g_pd) != 0)

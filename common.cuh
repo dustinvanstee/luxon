@@ -7,7 +7,7 @@
 #include <chrono>
 #include <nvtx3/nvToolsExt.h>
 
-#define DEBUG_BUILD 0 // just set to 0 or 1 , dont comment out
+#define DEBUG_BUILD 0 // just set to 0 or 1 
 
 #if DEBUG_BUILD > 0
     #define DEBUG(x) std::cerr << x

@@ -134,7 +134,7 @@ protected:
     eTransportType              transportType;
 
     int createMessageBlockHelper(MessageBlk* &msgBlk, eMsgBlkLocation dest) {
-        npt("Debug Version %d\n", 4);
+        npt("%s:", "TRACE\n");
         std::size_t msgSize = sizeof(Message);
         msgBlk->msgCount = MSG_MAX_SIZE;
         msgBlk->blockId = 0;

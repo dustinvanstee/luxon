@@ -13,6 +13,8 @@
 #include "../data/idataSource.cuh"
 #include <random>
 
+// Base size is 40B ..
+// Add dummy field to increase ?? 
 struct Instrument {
     char    symbol[5]; //TODO: Change these to char or fixed length string.
     char    exchange[5];
@@ -29,7 +31,7 @@ public:
     double dt = {1.0};
     int numInstruments;
     MarketData() {
-
+        npt("Calling MarketData Constructor %c\n",':');
         this->dataSourceType = eDataSourceType::FINANCE;
         std::vector<std::string> stks = {"AAPL", "GOOG"};
         this->numInstruments = stks.size();
@@ -65,7 +67,7 @@ public:
         std::vector<instrument> update;
         std::default_random_engine generator;
         std::normal_distribution<double> distribution(0.0,1.0);
-
+        npt("Adding %d messages in Random Update\n", numMsg);
         for(int j = 0; j < numMsg; j++)
         {
             instrument i = marketData[(uint8_t)(rand()%this->numInstruments)];
@@ -76,6 +78,7 @@ public:
             i.pkt_num = j;
             update.push_back(i);
         }
+        pt("Added %d MarketData updates", (int) update.size());
         return update;
     }
 

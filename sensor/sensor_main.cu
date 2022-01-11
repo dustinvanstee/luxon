@@ -28,7 +28,8 @@ int main(int argc,char *argv[], char *envp[]) {
     char hostBuffer[256];
     ITransport* transport;
     IDataSource* dataSource;
-
+    
+    npt("test %d",0);
     while ((op = getopt(argc, argv, "d:s:l:t:")) != -1) {
         switch (op) {
             case 'l':
@@ -112,7 +113,7 @@ int main(int argc,char *argv[], char *envp[]) {
             PrintUsage();
             return -1;
     }
-
+    npt("Sensor Statistics %c", ':');
     cout << "Sensor Flow has " << s.getFlowMsgCount(msgBlk) << " messages w/ avg size " << s.getFlowMsgAvgSize(msgBlk) << endl;
     cout << "Sensor Flow total size is " << s.getFlowByteLength(msgBlk) << " bytes " << endl;
     cout << "sending flow for " << numIter << " iterations" << endl;

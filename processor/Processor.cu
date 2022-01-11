@@ -86,7 +86,7 @@ int Processor::procCountZerosGPU(int minMessageToProcess) {
     size_t sumArraySize = MSG_BLOCK_SIZE * sizeof(int);
     CUDA_CHECK( cudaMallocManaged(&blockSum, sumArraySize));
    // cout << "Processing on GPU using " <<  numberOfBlocks << " blocks with " << threadsPerBlock << " threads per block" << endl;
-
+    t.start();
     while (processedMessages < minMessageToProcess) {
 
         if (0 != transport->pop(msgBlkPtr, MSG_BLOCK_SIZE, msgCountReturned)) {
@@ -111,18 +111,18 @@ int Processor::procCountZerosGPU(int minMessageToProcess) {
             }
 
             processedMessages += msgCountReturned;
-            pt("GPU Loop processing complete.  Processed %d messages.\n", processedMessages );
+            npt("GPU Loop processing complete.  Processed %d messages.\n", processedMessages );
 
         }
         //m.clear();
         msgCountReturned=0;
     }
-
+    t.stop();
    
     CUDA_CHECK( cudaFree(blockSum));
 
-    std::cout << "\n Processing Completed: " << std::endl;
-    std::cout << "\t processed " << processedMessages << " in " << t.seconds_elapsed() << " sec" << std::endl;
+    pt( "\n Processing Completed%c \n", ':');
+    std::cout << "\t processed " << processedMessages << " in " << t.usec_elapsed() << " usec" << std::endl;
     std::cout << "\t total zero's in messages = " << sum << std::endl;
     return 0;
 }
@@ -141,7 +141,7 @@ int Processor::procCountZerosCPU(int minMessageToProcess) {
     if(!transport->createMessageBlock(pmsgBlk, eMsgBlkLocation::HOST)){
         // print error messge
     }
-
+    t.start();
     while (processedMessages < minMessageToProcess) {
 
         if (0 != transport->pop(pmsgBlk, MSG_BLOCK_SIZE, msgCountReturned)) {
@@ -157,7 +157,7 @@ int Processor::procCountZerosCPU(int minMessageToProcess) {
         msgCountReturned=0;
 
     }
-
+    t.stop();
     //Free the receive buffer
     for(int i = 0; i < MSG_BLOCK_SIZE; i++)
     {
@@ -165,7 +165,7 @@ int Processor::procCountZerosCPU(int minMessageToProcess) {
     }
 
     std::cout << "\nProcessing Completed: " << std::endl;
-    std::cout << "\t processed " << processedMessages << " in " << t.seconds_elapsed() << " sec" << std::endl;
+    std::cout << "\t processed " << processedMessages << " in " << t.usec_elapsed() << " usec" << std::endl;
     std::cout << "\t total zero's in messages = " << sum << std::endl;
     return 0;
 }
@@ -201,7 +201,7 @@ void Processor::procDropMsg(int minMessageToProcess) {
     t.stop();
 
     std::cout << "\nProcessing Completed: " << std::endl;
-    std::cout << "\t processed " << processedMessages << " in " << t.seconds_elapsed() << " sec" << std::endl;
+    std::cout << "\t processed " << processedMessages << " in " << t.usec_elapsed() << " usec" << std::endl;
     exit(EXIT_SUCCESS);
 }
 
