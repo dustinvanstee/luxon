@@ -1,13 +1,13 @@
 #include "Processor.cuh"
 
-inline cudaError_t checkCuda(cudaError_t result)
-{
-    if (result != cudaSuccess) {
-        fprintf(stderr, "CUDA Runtime Error: %s\n", cudaGetErrorString(result));
-        assert(result == cudaSuccess);
-    }
-    return result;
-}
+//inline cudaError_t chceckCuda(cudaError_t result)
+//{
+//    if (result != cudaSuccess) {
+//        fprintf(stderr, "CUDA Runtime Error: %s\n", cudaGetErrorString(result));
+//        assert(result == cudaSuccess);
+//    }
+//    return result;
+//}
 
 __global__ void gpu_count_zeros(Message* flow, int* sum, int flowLength)
 {
@@ -76,7 +76,7 @@ void Processor::procCountZerosGPU(int minMessageToProcess) {
 
     int* blockSum;   //Array with sum of zeros for this message
     size_t sumArraySize = MSG_BLOCK_SIZE * sizeof(int);
-    checkCuda( cudaMallocManaged(&blockSum, sumArraySize));
+    CUDA_CHECK( cudaMallocManaged(&blockSum, sumArraySize));
    // cout << "Processing on GPU using " <<  numberOfBlocks << " blocks with " << threadsPerBlock << " threads per block" << endl;
 
     while (processedMessages < minMessageToProcess) {
@@ -85,16 +85,16 @@ void Processor::procCountZerosGPU(int minMessageToProcess) {
             exit(EXIT_FAILURE);
         }
 
-        cudaMemPrefetchAsync(pmsgBlk, MSG_BLOCK_SIZE*sizeof(Message), deviceId);
+        CUDA_CHECK(cudaMemPrefetchAsync(msgBlk.messages, MSG_BLOCK_SIZE*sizeof(Message), deviceId));
 
         if(msgCountReturned > 0) //If there are new messages process them
         {
             gpu_count_zeros <<< numberOfBlocks, threadsPerBlock >>>(msgBlk.messages, blockSum, msgCountReturned);
 
-            checkCuda( cudaGetLastError() );
-            checkCuda( cudaDeviceSynchronize() ); //Wait for GPU threads to complete
+            CUDA_CHECK( cudaGetLastError() );
+            CUDA_CHECK( cudaDeviceSynchronize() ); //Wait for GPU threads to complete
 
-            cudaMemPrefetchAsync(blockSum, sumArraySize, cudaCpuDeviceId);
+            CUDA_CHECK(cudaMemPrefetchAsync(blockSum, sumArraySize, cudaCpuDeviceId));
 
             for(int k = 0; k < msgCountReturned; k++)
             {
@@ -111,8 +111,8 @@ void Processor::procCountZerosGPU(int minMessageToProcess) {
 
     }
 
-    checkCuda( cudaFree(pmsgBlk));
-    checkCuda( cudaFree(blockSum));
+    CUDA_CHECK( cudaFree(msgBlk.messages));
+    CUDA_CHECK( cudaFree(blockSum));
 
     std::cout << "\n Processing Completed: " << std::endl;
     std::cout << "\t processed " << processedMessages << " in " << t.seconds_elapsed() << " sec" << std::endl;

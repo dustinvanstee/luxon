@@ -123,7 +123,7 @@ protected:
             msgBlk->messages = static_cast<Message *>(malloc(msgSize * MSG_BLOCK_SIZE));
         } else {
             //TODO : add code for device selection
-            CUDA_CHECK(cudaMalloc((void **) &msgBlk, msgSize * MSG_BLOCK_SIZE));
+            CUDA_CHECK(cudaMallocManaged((void **) &msgBlk->messages, msgSize * MSG_BLOCK_SIZE));
         }
 
         for (int i = 0; i < MSG_BLOCK_SIZE; i++) {

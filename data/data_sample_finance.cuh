@@ -1,6 +1,6 @@
 //
-// Created by alex on 7/15/20.
-//
+// ChangeLog 
+//  121721 DV added random walk to finance instruments
 
 #ifndef LUXON_FINANCE_MSG_CUH
 #define LUXON_FINANCE_MSG_CUH
@@ -10,6 +10,7 @@
 
 #include "../common.cuh"
 #include "../data/idataSource.cuh"
+#include <random>
 
 #define NUMBER_INSTRUMENTS 10
 
@@ -19,25 +20,29 @@ struct Instrument {
     int     bid;
     int     ask;
     int     volume;
+    int     pkt_num;
 } typedef instrument;
 
 class MarketData : public IDataSource {
 public:
+    double mu {0.01};
+    double sigma {0.001};
+    double dt = {1.0};
     MarketData() {
 
         this->dataSourceType = eDataSourceType::FINANCE;
 
         this->marketData= {
-                {"AAPL", "NYSE", 0, 0, 0},
-                {"MSFT", "NYSE", 0, 0, 0},
-                {"AMZN", "NYSE", 0, 0, 0},
-                {"FB", "NYSE", 0, 0, 0},
-                {"GOOGL", "NYSE", 0, 0, 0},
-                {"GOOG", "NYSE", 0, 0, 0},
-                {"TSLA", "NYSE", 0, 0, 0},
-                {"NVDA", "NYSE", 0, 0, 0},
-                {"BRK.B", "NYSE", 0, 0, 0},
-                {"JPM", "NYSE", 0, 0, 0},
+                {"AAPL", "NYSE", 100, 101, 9999, -1},
+                {"MSFT", "NYSE", 100, 101, 9999, -1},
+                {"AMZN", "NYSE", 100, 101, 9999, -1},
+                {"FB",   "NYSE", 100, 101, 9999, -1},
+                {"GOOGL","NYSE", 100, 101, 9999, -1},
+                {"GOOG", "NYSE", 100, 101, 9999, -1},
+                {"TSLA", "NYSE", 100, 101, 9999, -1},
+                {"NVDA", "NYSE", 100, 101, 9999, -1},
+                {"BRK.B","NYSE", 100, 101, 9999, -1},
+                {"JPM",  "NYSE", 100, 101, 9999, -1},
         };
 
     }; // Constructor declaration
@@ -46,12 +51,17 @@ public:
     std::vector<instrument> createRandomUpdate(int numMsg)
     {
         std::vector<instrument> update;
+        std::default_random_engine generator;
+        std::normal_distribution<double> distribution(0.0,1.0);
+
         for(int j = 0; j < numMsg; j++)
         {
             instrument i = marketData[(uint8_t)(rand()%NUMBER_INSTRUMENTS)];
-            i.bid = (uint8_t)((rand()%256)+1);
-            i.ask = (uint8_t)((rand()%256)+1);
+            int dS = mu * i.bid * dt + sigma * i.bid * distribution(generator) * sqrt(dt);
+            i.bid = i.bid + dS;
+            i.ask = i.bid + 0.01;
             i.volume++;
+            i.pkt_num = j;
             update.push_back(i);
         }
         return update;
