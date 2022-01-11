@@ -1,9 +1,5 @@
-//
-// Created by alex on 7/16/20.
-//
-
-#ifndef SENSORSIM_UDP_TRANSPORT_CUH
-#define SENSORSIM_UDP_TRANSPORT_CUH
+#ifndef LUXON_UDP_TRANSPORT_CUH
+#define LUXON_UDP_TRANSPORT_CUH
 
 #include <netinet/in.h>
 #include <unistd.h>
@@ -20,15 +16,15 @@ class UdpTransport: public ITransport {
 public:
     UdpTransport(string localAddr, string mcastAddr, eTransportRole role);
 
-private:
-    int push(Message* msg);
-    int pop(Message** msg, int numReqMsg, int& numRetMsg, eTransportDest dest);
-    Message* createMessage();
-    int freeMessage(Message* msg);
+    int push(MessageBlk* msgBlk, int numMsg) override;
+    int pop(MessageBlk* msgBlk, int numReqMsg, int& numRetMsg) override;
+    int createMessageBlock(MessageBlk* msgBlk, eMsgBlkLocation dest) override;
+    int freeMessageBlock(MessageBlk* msgBlk, eMsgBlkLocation dest)override;
 
-    struct ip_mreq        mcastGroup;
+private:
+     struct ip_mreq        mcastGroup;
 
 };
 
 
-#endif //SENSORSIM_UDP_TRANSPORT_CUH
+#endif //LUXON_UDP_TRANSPORT_CUH

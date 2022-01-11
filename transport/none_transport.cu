@@ -9,26 +9,26 @@ NoneTransport::NoneTransport()
     this->transportType = eTransportType::NONE;
 }
 
-int NoneTransport::push(Message* m)
+int NoneTransport::push(MessageBlk* m, int numMsg)
+{
+    int i = 0; //Some stuff to avoid getting this whole stack call optimized out.
+    i++;
+    return 0;
+}
+
+int NoneTransport::pop(MessageBlk* m, int numReqMsg, int& numRetMsg)
 {
     return 0;
 }
 
-int NoneTransport::pop(Message** m, int numReqMsg, int& numRetMsg, eTransportDest dest)
+int NoneTransport::createMessageBlock(MessageBlk* msgBlk, eMsgBlkLocation dest)
 {
-    return 0;
+    return createMessageBlockHelper(msgBlk, dest);
 }
 
-Message* NoneTransport::createMessage() {
-    std::size_t t = sizeof(Message);
-    auto* m = static_cast<Message*>(malloc(t));
-    return m;
-}
-
-int NoneTransport::freeMessage(Message* m)
+int NoneTransport::freeMessageBlock(MessageBlk* msgBlk, eMsgBlkLocation dest)
 {
-    free(m);
-    return 0;
+    return freeMessageBlockHelper(msgBlk, dest);
 }
 
 

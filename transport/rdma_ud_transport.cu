@@ -1,5 +1,6 @@
 #include "rdma_ud_transport.cuh"
 
+#include <assert.h>
 #include <cstdio>
 #include <algorithm>
 #include <arpa/inet.h>
@@ -24,8 +25,52 @@ int get_addr(const char *dst, struct sockaddr *addr)
     return ret;
 }
 
+int RdmaUdTransport::createMessageBlock(MessageBlk* msgBlk, eMsgBlkLocation dest)
+{
+    npt("%s:", "TRACE\n");
+
+    if (dest == eMsgBlkLocation::HOST) {
+        if(0 != createMessageBlockHelper(msgBlk, dest))
+        {
+            exit(EXIT_FAILURE);
+        }
+
+        //Register this new message block for RDMA access
+        mrMsgBlk = create_MEMORY_REGION(msgBlk->messages, (sizeof(Message) * MSG_BLOCK_SIZE));
+
+        //Create Match Set of QP work elements.
+        for(int i = 0; i < MSG_BLOCK_SIZE; i++)
+        {
+            initSendWqe(&sendWqe[i], i);
+            if(i == MSG_BLOCK_SIZE-1) { //There is no next block set to NULL
+                sendWqe[i].next = NULL;
+            } else {
+                sendWqe[i].next = &sendWqe[i + 1];
+            }
+            updateSendWqe(&sendWqe[i], &msgBlk->messages[0], MSG_MAX_SIZE, mrMsgBlk);
+            initRecvWqe(&rcvWqe[i], i);
+            updateRecvWqe(&rcvWqe[i], &msgBlk->messages[0], MSG_MAX_SIZE, mrMsgBlk);
+        }
+
+    } else {
+        //TODO: Need to add ability to rdma to gpu memory.
+        fprintf(stderr, "ERROR: GPU Direct RDMA not supported yet\n");
+        return -1;
+    }
+
+    return 0;
+}
+
+int RdmaUdTransport::freeMessageBlock(MessageBlk* msgBlk, eMsgBlkLocation dest)
+{
+    npt("%s:", "TRACE\n");
+    return freeMessageBlockHelper(msgBlk, dest);
+}
+
+
 RdmaUdTransport::RdmaUdTransport(std::string localAddr, std::string mcastAddr, eTransportRole role) {
     this->transportType = eTransportType::RDMA_UD;
+    npt("%s:", "TRACE\n");
 
     s_localAddr = localAddr;
     s_mcastAddr = mcastAddr;
@@ -61,67 +106,71 @@ RdmaUdTransport::RdmaUdTransport(std::string localAddr, std::string mcastAddr, e
         exit(EXIT_FAILURE);
     }
 
-    //Initialize the Message Buffer Pool
-    mr_messagePool = create_MEMORY_REGION(&messagePool, (sizeof(Message) * MSG_BLOCK_SIZE));
-    for(int i = 0; i < MSG_BLOCK_SIZE; i++)
-    {
-        messagePoolSlotFree[i] = true;
-    }
-
-    initSendWqe(&dataSendWqe, 42);
-    updateSendWqe(&dataSendWqe, &messagePool[0], MSG_MAX_SIZE, mr_messagePool);
-    initRecvWqe(&dataRcvWqe, 99);
-    updateRecvWqe(&dataRcvWqe, &messagePool[0], MSG_MAX_SIZE, mr_messagePool);
-
 }
 
 RdmaUdTransport::~RdmaUdTransport() {
-
+    npt("%s:", "TRACE\n");
     //Clean the RDMA Contexts
     DestroyContext();
     DestroyQP();
 
-    ibv_dereg_mr(mr_messagePool);
-
-    //Free all the Memory used in the message block
-    freeMsgBlock();
+    ibv_dereg_mr(mrMsgBlk);
 }
 
-int RdmaUdTransport::push(Message* m)
+int RdmaUdTransport::push(MessageBlk* m, int numMsg)
 {
+    npt("%s:", "TRACE\n");
+    int err;
+    int ret = 0;
+    struct ibv_send_wr *bad_wqe = NULL;
 
-    updateSendWqe(&dataSendWqe, m->buffer, m->bufferSize, mr_messagePool);
+    if(numMsg < MSG_BLOCK_SIZE)
+    {
+        sendWqe[numMsg].next = NULL; //Stop sending after numMsgs.
+    }
 
-    post_SEND_WQE(&dataSendWqe);
+    do {
+        err = ibv_post_send(g_CMId->qp, sendWqe, &bad_wqe);
 
-       DEBUG("DEBUG: Sent Message:\n");
-      #ifdef DEBUG_BUILD
-       printMessage(m, 32);
-       sleep(5);
-      #endif
-        DEBUG("DEBUG: WRID(" << dataSendWqe.wr_id << ")\tLength(" << dataSendWqe.sg_list->length << ")\n");
+        //Error Handling BLock for Post Send
+        if (err != 0)
+        {
+            fprintf(stderr, "ERROR: post_SEND_WQE Error %u\n", err);
+            if (err == ENOMEM) //Queue Full Wait for CQ Polling Thread to Clear
+            {
+                fprintf(stderr, "ERROR: Send Queue Full Retry %u of 10\n", ret);
+                usleep(100); //Wait 100 Microseconds, max of 1 msec
+            } else {
+                fprintf(stderr, "ERROR: Unrecoverable Send Queue, aborting\n");
+                return -1;
+            }
+        }
 
-      //Wait For Completion
-      int ret;
+    } while(err != 0);
 
-      DEBUG("DEBUG: Waiting for CQE\n");
-      do {
-          ret = ibv_poll_cq(g_cq, 1, &dataWc);
-      } while(ret == 0);
-      DEBUG("DEBUG: Received " << ret << " CQE Elements\n");
-      DEBUG("DEBUG: WRID(" << dataWc.wr_id << ")\tStatus(" << dataWc.status << ") length( " <<dataWc.byte_len << ")\n");
+    for(int i = 0; i < numMsg; i++) {
+        //Wait For Completion
+        int ret;
 
-      if(dataWc.status == IBV_WC_RNR_RETRY_EXC_ERR)
-      {
-          usleep(50); //wait 50 us and we will try again.
-          std::cerr << "DEBUG: WRID(" << dataWc.wr_id << ")\tStatus(IBV_WC_RNR_RETRY_EXC_ERR)" << std::endl;
-          return -1;
-      }
-      if(dataWc.status != IBV_WC_SUCCESS)
-      {
-          std::cerr << "DEBUG: WRID(" << dataWc.wr_id << ")\tStatus(" << dataWc.status << ")" << std::endl;
-          return -1;
-      }
+        DEBUG("DEBUG: Waiting for CQE\n");
+        do {
+            ret = ibv_poll_cq(g_cq, 1, &cqe[0]);
+        } while (ret == 0);
+        DEBUG("DEBUG: Received " << ret << " CQE Elements\n");
+        //DEBUG("DEBUG: WRID(" << cqe.wr_id << ")\tStatus(" << cqe.status << ") length( " << cqe.byte_len
+        //                     << ")\n");
+
+        if (cqe[0].status == IBV_WC_RNR_RETRY_EXC_ERR) {
+            usleep(50); //wait 50 us and we will try again.
+            //std::cerr << "DEBUG: WRID(" << cqe.wr_id << ")\tStatus(IBV_WC_RNR_RETRY_EXC_ERR)" << std::endl;
+            return -1;
+        }
+        if (cqe[0].status != IBV_WC_SUCCESS) {
+            //std::cerr << "DEBUG: WRID(" << cqe.wr_id << ")\tStatus(" <<  cqe.status << ")" << std::endl;
+            return -1;
+        }
+
+    }
 
     return 0;
 }
@@ -129,22 +178,25 @@ int RdmaUdTransport::push(Message* m)
 /*
 *  Pulls messages from the transport and places it in the message block  buffer
 */
-int RdmaUdTransport::pop(Message** m, int numReqMsg, int& numRetMsg, eTransportDest dest)
+
+// TODO : 121621 broke this due to code refactor for gpudirect
+int RdmaUdTransport::pop(MessageBlk* msgBlk, int numReqMsg, int& numRetMsg)
 {
     numRetMsg = 0;
-    Message* msg;
+    Message* msg = NULL;
+    npt("%s:", "TRACE\n");
 
     do {
         //Post the RcvWQE
-        msg = reinterpret_cast<Message *>(&messagePool[numRetMsg * sizeof(Message)]);
-        updateRecvWqe(&dataRcvWqe, msg->buffer, MSG_MAX_SIZE, mr_messagePool);
-        post_RECEIVE_WQE(&dataRcvWqe);
+        msg = reinterpret_cast<Message *>(&msgBlk[numRetMsg * sizeof(Message)]);
+        updateRecvWqe(&rcvWqe[numRetMsg], msgBlk->messages[numRetMsg].buffer, MSG_MAX_SIZE, mrMsgBlk);
+        post_RECEIVE_WQE(&rcvWqe[numRetMsg]);
 
         int r;
         DEBUG("DEBUG: Waiting for CQE\n");
         do {
             //TODO: We should be pulling block size (1k) messages at a time
-            r = ibv_poll_cq(g_cq, 1, &dataWc);
+            r = ibv_poll_cq(g_cq, 1, &cqe[0]);
         } while (r == 0);
         DEBUG("DEBUG: Received " << r << " CQE Elements\n");
 
@@ -152,16 +204,16 @@ int RdmaUdTransport::pop(Message** m, int numReqMsg, int& numRetMsg, eTransportD
 
         for (int j = 0; j < r; j++) {
             DEBUG ("test");
-            DEBUG("DEBUG: WRID(" << dataWc.wr_id <<
-                                 ")\tStatus(" << dataWc.status << ")" <<
-                                 ")\tSize(" << dataWc.byte_len << ")\n");
+            //DEBUG("DEBUG: WRID(" << cqe.wr_id <<
+            //                     ")\tStatus(" << cqe.status << ")" <<
+            //                     ")\tSize(" << cqe.byte_len << ")\n");
         }
 
         *msg->buffer += 40;
-        msg->bufferSize = dataWc.byte_len - 40;
+        msg->bufferSize = cqe[0].byte_len - 40;
         msg->seqNumber = numRetMsg-1;
         msg->interval = 0;
-        m[numRetMsg-1] = msg;
+        //m[numRetMsg-1] = msg;
 
         DEBUG ("DEBUG: Received Message:\n");
         #ifdef DEBUG_BUILD
@@ -177,6 +229,7 @@ int RdmaUdTransport::pop(Message** m, int numReqMsg, int& numRetMsg, eTransportD
 int RdmaUdTransport::initSendWqe(ibv_send_wr* wqe, int i)
 {
     struct ibv_sge *sge;
+    npt("%s:", "TRACE\n");
 
     //wqe = (ibv_send_wr *)malloc(sizeof(ibv_send_wr));
     sge = (ibv_sge *)malloc(sizeof(ibv_sge));
@@ -199,6 +252,7 @@ int RdmaUdTransport::initSendWqe(ibv_send_wr* wqe, int i)
 
 int RdmaUdTransport::updateSendWqe(ibv_send_wr* wqe, void* buffer, size_t bufferlen, ibv_mr* bufferMemoryRegion)
 {
+    npt("%s wr_id :%lu \n", "TRACE", wqe->wr_id);
     wqe->sg_list->addr = (uintptr_t)buffer;
     wqe->sg_list->length = bufferlen;
     wqe->sg_list->lkey = bufferMemoryRegion->lkey;
@@ -208,6 +262,7 @@ int RdmaUdTransport::updateSendWqe(ibv_send_wr* wqe, void* buffer, size_t buffer
 int RdmaUdTransport::initRecvWqe(ibv_recv_wr* wqe, int id)
 {
     struct ibv_sge *sge;
+    npt("%s:", "TRACE\n");
 
     sge = (ibv_sge *)malloc(sizeof(ibv_sge));
 
@@ -222,48 +277,16 @@ int RdmaUdTransport::initRecvWqe(ibv_recv_wr* wqe, int id)
 }
 
 int RdmaUdTransport::updateRecvWqe(ibv_recv_wr *wqe, void *buffer, size_t bufferlen, ibv_mr *bufferMemoryRegion) {
-
+    npt("%s:", "TRACE\n");
     wqe->sg_list->addr = (uintptr_t)buffer;
     wqe->sg_list->length = bufferlen;
     wqe->sg_list->lkey = bufferMemoryRegion->lkey;
     return 0;
 }
 
-/*
- * puts the work queue element (WQE) on the send queue.
- * returns: 0 on SUCCESS, -1 on failure
- */
-int RdmaUdTransport::post_SEND_WQE(ibv_send_wr* ll_wqe)
-{
-    int err;
-    int ret = 0;
-    struct ibv_send_wr *bad_wqe = NULL;
-
-    do{
-        err = ibv_post_send(g_CMId->qp, ll_wqe, &bad_wqe);
-
-        if(err == 0){
-            return 0;
-        }
-
-        fprintf(stderr,"ERROR: post_SEND_WQE Error %u\n", err);
-        if(err == ENOMEM && ret++ < 10) //Queue Full Wait for CQ Polling Thread to Clear
-        {
-            fprintf(stderr,"ERROR: Send Queue Full Retry %u of 10\n", ret);
-            usleep(100); //Wait 100 Microseconds, max of 1 msec
-        }
-        else
-        {
-            fprintf(stderr, "ERROR: Unrecoverable Send Queue, aborting\n");
-            return -1;
-        }
-
-    }while(true);
-
-}
-
 int RdmaUdTransport::post_RECEIVE_WQE(ibv_recv_wr* ll_wqe)
 {
+    npt("%s:", "TRACE\n");
     DEBUG("DEBUG: Enter post_RECEIVE_WQE\n");
     int ret;
     struct ibv_recv_wr *bad_wqe = NULL;
@@ -281,6 +304,7 @@ int RdmaUdTransport::post_RECEIVE_WQE(ibv_recv_wr* ll_wqe)
 
 ibv_mr* RdmaUdTransport::create_MEMORY_REGION(void* buffer, size_t bufferlen)
 {
+    npt("%s:", "TRACE\n");
     ibv_mr* tmpmr = (ibv_mr*)malloc(sizeof(ibv_mr));
     int mr_flags = IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_READ | IBV_ACCESS_REMOTE_WRITE;
     tmpmr = ibv_reg_mr(g_pd, buffer, bufferlen, mr_flags);
@@ -290,10 +314,8 @@ ibv_mr* RdmaUdTransport::create_MEMORY_REGION(void* buffer, size_t bufferlen)
         return NULL;
     }
 
-#ifdef DEBUG_BUILD
-    fprintf(stderr, "DEBUG: Memory Region was registered with addr=%p, lkey=0x%x, rkey=0x%x, flags=0x%x\n",
+    npt("DEBUG: Memory Region was registered with addr=%p, lkey=0x%x, rkey=0x%x, flags=0x%x\n",
             buffer, tmpmr->lkey, tmpmr->rkey, mr_flags);
-#endif
 
     return tmpmr;
 }
@@ -305,6 +327,7 @@ int RdmaUdTransport::RDMACreateContext()
 {
     int ret;
     struct rdma_cm_event *CMEvent;
+    npt("%s:", "TRACE\n");
 
     // Open a Channel to the Communication Manager used to receive async events from the CM.
     g_CMEventChannel = rdma_create_event_channel();
@@ -374,6 +397,7 @@ int RdmaUdTransport::RDMACreateContext()
 
 int RdmaUdTransport::RDMACreateQP()
 {
+    npt("%s:", "TRACE\n");
     int ret;
     struct ibv_qp_init_attr qp_init_attr;
 
@@ -391,7 +415,7 @@ int RdmaUdTransport::RDMACreateQP()
 
     /*Create a completion Queue */
     //g_cq = ibv_create_cq(g_CMId->verbs, NUM_OPERATIONS, NULL, NULL, 0);
-    g_cq = ibv_create_cq(g_CMId->verbs, 5, NULL, NULL, 1);
+    g_cq = ibv_create_cq(g_CMId->verbs, MSG_BLOCK_SIZE, NULL, NULL, 1);
     if(!g_cq)
     {
         fprintf(stderr, "ERROR: RDMACreateQP - Couldn't create completion queue\n");
@@ -406,8 +430,8 @@ int RdmaUdTransport::RDMACreateQP()
     //qp_init_attr.sq_sig_all = 0;
     qp_init_attr.send_cq = g_cq;
     qp_init_attr.recv_cq = g_cq;
-    qp_init_attr.cap.max_send_wr = NUM_OPERATIONS;
-    qp_init_attr.cap.max_recv_wr = NUM_OPERATIONS;
+    qp_init_attr.cap.max_send_wr = MSG_BLOCK_SIZE;
+    qp_init_attr.cap.max_recv_wr = MSG_BLOCK_SIZE;
     qp_init_attr.cap.max_send_sge = 1;
     qp_init_attr.cap.max_recv_sge = 1;
 
@@ -423,6 +447,7 @@ int RdmaUdTransport::RDMACreateQP()
 
 int RdmaUdTransport::RdmaMcastConnect()
 {
+    npt("%s:", "TRACE\n");
     int ret;
     struct rdma_cm_event *CMEvent;
 
@@ -468,6 +493,7 @@ int RdmaUdTransport::RdmaMcastConnect()
 
 void RdmaUdTransport::DestroyContext()
 {
+    npt("%s:", "TRACE\n");
     if(g_CMEventChannel != NULL)
     {
         rdma_destroy_event_channel(g_CMEventChannel);
@@ -484,6 +510,7 @@ void RdmaUdTransport::DestroyContext()
 
 void RdmaUdTransport::DestroyQP()
 {
+    npt("%s:", "TRACE\n");
     if(g_pd != NULL)
     {
         if(ibv_dealloc_pd(g_pd) != 0)
@@ -504,38 +531,7 @@ void RdmaUdTransport::DestroyQP()
 
 }
 
-Message* RdmaUdTransport::createMessage() {
-    Message * m = NULL;
 
-    for(int i = 0; i < MSG_BLOCK_SIZE; i++)
-    {
-        if(messagePoolSlotFree[i])
-        {
-            messagePoolSlotFree[i] = false;
-            m = reinterpret_cast<Message *>(&messagePool[i * sizeof(Message)]);
-            m->seqNumber = 0;
-            m->interval = 0;
-            m->bufferSize = MSG_BLOCK_SIZE;
-            return m;
-        }
-    }
 
-    return NULL; //We went through the whole Memory Pool and didn't find an open slot.
-}
-
-int RdmaUdTransport::freeMessage(Message* m)
-{
-    //TODO: need to find and free this slot in the memory pool.
-    return 0;
-}
-
-int RdmaUdTransport::freeMsgBlock()
-{
-    for(int i = 0; i < MSG_BLOCK_SIZE; i++) {
-        messagePoolSlotFree[i] = true;
-        freeMessage(reinterpret_cast<Message *>(messagePool[i]));
-    }
-    return 0;
-}
 
 

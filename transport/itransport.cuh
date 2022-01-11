@@ -1,13 +1,11 @@
-//
-// Created by alex on 8/7/20.
-//
-
 #ifndef LUXON_ITRANSPORT_CUH
 #define LUXON_ITRANSPORT_CUH
 
 #include <netinet/in.h>
 
-enum class eTransportDest {HOST, DEVICE};
+#define DEFAULT_PATTERN 0xFEED
+
+enum class eMsgBlkLocation {HOST, DEVICE};
 enum class eTransportType {UDP, RDMA_UD, PRINT, NONE, UNKNOWN};
 enum class eTransportRole {SENSOR, PROCESSOR};
 
@@ -19,6 +17,14 @@ typedef struct
     uint8_t buffer[MSG_MAX_SIZE];
 } Message;
 
+typedef struct
+{
+    int blockId; //used to map to other resources maintained by the transport.
+    int msgCount;
+    eMsgBlkLocation memLocation;
+    Message* messages;
+} MessageBlk;
+
 
 class ITransport {
 
@@ -27,11 +33,10 @@ public:
     /*
      * Interface Methods
      */
-    virtual int push(Message* msg) = 0;
-    virtual int pop(Message** m, int numReqMsg, int& numRetMsg, eTransportDest dest ) = 0;
-
-    virtual Message* createMessage() = 0;
-    virtual int freeMessage(Message* msg) = 0;
+    virtual int push(MessageBlk* msgBlk, int numMsg) = 0;
+    virtual int pop(MessageBlk* msgBlk, int numReqMsg, int& numRetMsg) = 0;
+    virtual int createMessageBlock(MessageBlk* msgBlk, eMsgBlkLocation dest) = 0;
+    virtual int freeMessageBlock(MessageBlk* msgBlk, eMsgBlkLocation dest) = 0;
 
     /*
     * Interface Statics
@@ -82,6 +87,25 @@ public:
         std::cout << std::endl;
     }
 
+    static std::string toString(MessageBlk *m) {
+        std::string rv;
+        rv =  "blockId    :" + std::to_string(m->blockId) + "\n";
+        rv += "msgCount   :" + std::to_string(m->msgCount) + "\n";
+        //rv += "memLocation:" + std::to_string(static_cast<int>( m->memLocation)) + "\n";
+        rv += "interval   :" + std::to_string(m->messages->interval) + "\n";
+        rv += "bufferSize :" + std::to_string(m->messages->bufferSize) + "\n";
+        rv += "seqNumber  :" + std::to_string(m->messages->seqNumber) + "\n";
+
+        char bufferp[10];
+        for(int i=0; i<5; i++) {
+            sprintf(&bufferp[i*2], "%02hhX ", m->messages->buffer[i]);
+        }
+        rv += "Buffer[0:10]: " + std::string(bufferp) + "\n";
+        
+        return rv;
+    }
+
+
     /*
      * Accessor Methods
      */
@@ -94,6 +118,9 @@ public:
        return this->TransportTypeToStr(this->transportType);
     }
 
+
+    
+
 protected:
     //All Transports will use basic IPoX as a control plane to establish a connection.
     std::string                 s_mcastAddr;
@@ -105,6 +132,40 @@ protected:
     int                         sockfd;
 
     eTransportType              transportType;
+
+    int createMessageBlockHelper(MessageBlk* &msgBlk, eMsgBlkLocation dest) {
+        npt("%s:", "TRACE\n");
+        std::size_t msgSize = sizeof(Message);
+        msgBlk->msgCount = MSG_MAX_SIZE;
+        msgBlk->blockId = 0;
+        msgBlk->memLocation = dest;
+
+        if (dest == eMsgBlkLocation::HOST) {
+            msgBlk->messages = static_cast<Message *>(malloc(msgSize * MSG_BLOCK_SIZE));
+        } else {
+            //TODO : add code for device selection
+            CUDA_CHECK(cudaMallocManaged((void **) &msgBlk->messages, msgSize * MSG_BLOCK_SIZE));
+        }
+
+        for (int i = 0; i < MSG_BLOCK_SIZE; i++) {
+            msgBlk->messages[i].seqNumber = i;
+            msgBlk->messages[i].interval = 0;
+            msgBlk->messages[i].bufferSize = MSG_MAX_SIZE;
+            memset(msgBlk->messages[i].buffer, DEFAULT_PATTERN, MSG_MAX_SIZE);
+        }
+        return 0;
+    }
+
+    int freeMessageBlockHelper(MessageBlk* msgBlk, eMsgBlkLocation dest)
+    {
+        if (dest == eMsgBlkLocation::HOST) {
+            free(msgBlk);
+        } else {
+            //TODO : add code for device selection
+            CUDA_CHECK(cudaFree(msgBlk->messages));
+        }
+        return 0;
+    }
 };
 
 

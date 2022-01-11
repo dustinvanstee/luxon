@@ -1,17 +1,8 @@
-#include "Sensor.cuh"
-
 #include <iostream>
 #include <unistd.h>
 #include <chrono>
 
-#include "../common.cuh"
-#include "../data/idataSource.cuh"
-#include "../data/data_sample_finance.cuh"
-#include "../transport/itransport.cuh"
-#include "../transport/print_transport.cuh"
-#include "../transport/none_transport.cuh"
-#include "../transport/udp_transport.cuh"
-#include "../transport/rdma_ud_transport.cuh"
+#include "Sensor.cuh"
 
 void PrintUsage()
 {
@@ -37,7 +28,8 @@ int main(int argc,char *argv[], char *envp[]) {
     char hostBuffer[256];
     ITransport* transport;
     IDataSource* dataSource;
-
+    
+    npt("test %d",0);
     while ((op = getopt(argc, argv, "d:s:l:t:")) != -1) {
         switch (op) {
             case 'l':
@@ -100,46 +92,52 @@ int main(int argc,char *argv[], char *envp[]) {
     //Create the Sensor
     Sensor s = Sensor(transport, dataSourceType);
 
+    MessageBlk msgBlk;
+
     //Create the update flow based on the data source.
     switch(dataSourceType) {
         case eDataSourceType::PCAP:
-            s.createPCAPFlow(fileName);
+            s.createPCAPFlow(msgBlk, fileName);
             break;
         case eDataSourceType::RANDOM:
-            s.createRandomFlow(100);
+            s.createRandomFlow(msgBlk, MSG_BLOCK_SIZE);
+            break;
+        case eDataSourceType::PAT:
+            s.createPatternFlow(msgBlk, MSG_BLOCK_SIZE);
             break;
         case eDataSourceType::FINANCE:
-            s.createFinanceFlow(100);
+            s.createFinanceFlow(msgBlk, MSG_BLOCK_SIZE);
             break;
         default :
             cout << "No valid data source" << endl;
             PrintUsage();
             return -1;
     }
-
-    cout << "Sensor Flow has " << s.getFlowMsgCount() << " messages w/ avg size " << s.getFlowMsgAvgSize() << endl;
-    cout << "Sensor Flow total size is " << s.getFlowByteLength() << " bytes " << endl;
+    npt("Sensor Statistics %c", ':');
+    cout << "Sensor Flow has " << s.getFlowMsgCount(msgBlk) << " messages w/ avg size " << s.getFlowMsgAvgSize(msgBlk) << endl;
+    cout << "Sensor Flow total size is " << s.getFlowByteLength(msgBlk) << " bytes " << endl;
     cout << "sending flow for " << numIter << " iterations" << endl;
+    cout << "sending " << numIter * s.getFlowMsgCount(msgBlk) << " messages" << endl;
 
     long long sentMessages = 0;
-    int flowLength = s.getFlowMsgCount();
+    int flowLength = s.getFlowMsgCount(msgBlk);
 
     timer t_runTime;
 
-    int i = 0;
+    int i = 1; //First Iteration
     t_runTime.start();
     do {
-        if (0 != s.sendFlow())
+        if (0 != s.sendFlow(msgBlk))
         {
             cout << "Transport Error Sending sensor Flow - Exiting" << endl;
             return -1;
         }
         sentMessages += flowLength;
-    } while (i++ <= numIter);
+    } while (i++ < numIter);
     t_runTime.stop();
-    cerr << "\rSent " << sentMessages << " messages\t Time: " << t_runTime.seconds_elapsed() << "/" << t_runTime.usec_elapsed() << "msec"  << endl;
+    cerr << "\rSent " << sentMessages << " messages\t Time: " << t_runTime.usec_elapsed() << "usec"  << endl;
 
-    cerr << "Rate " << (sentMessages/t_runTime.usec_elapsed()) * 1000 << "Messages Per Second" << endl;
+    cerr << "Rate " << (sentMessages/t_runTime.usec_elapsed()) * 1000 << " Messages Per Second" << endl;
 
 
     return 0;

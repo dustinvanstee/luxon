@@ -4,49 +4,35 @@
 
 #include "print_transport.cuh"
 
-#define PATTERN 0xFEED
-
 PrintTransport::PrintTransport()
 {
     this->transportType = eTransportType::PRINT;
 }
 
-int PrintTransport::push(Message* m)
+int PrintTransport::push(MessageBlk* m, int numMsg)
 {
-    printMessage(m, 32);
-    return 0;
-}
-
-int PrintTransport::pop(Message** m, int numReqMsg, int& numRetMsg, eTransportDest dest)
-{
-    int recvlen;                        // num bytes received
-
-    for(int i = 0; i < numReqMsg; i++) {
-        recvlen = MSG_MAX_SIZE;
-
-        if (recvlen > 0) {
-            m[i] = createMessage();
-            m[i]->seqNumber = i;
-            m[i]->interval = 0;
-            m[i]->bufferSize = recvlen;
-            memset(&m[i]->buffer, PATTERN, MSG_MAX_SIZE);
-            numRetMsg = numRetMsg + 1;
-        }
+    for(int i = 0; i < numMsg; i++)
+    {
+        printMessage(&m->messages[i], 32);
     }
-
     return 0;
 }
 
-Message* PrintTransport::createMessage() {
-    std::size_t t = sizeof(Message);
-    auto* m = static_cast<Message*>(malloc(t));
-    return m;
-}
-
-int PrintTransport::freeMessage(Message* m)
+int PrintTransport::pop(MessageBlk* msgBlk, int numReqMsg, int& numRetMsg)
 {
-    free(m);
+    numRetMsg = numReqMsg;
     return 0;
 }
+
+int PrintTransport::createMessageBlock(MessageBlk* msgBlk, eMsgBlkLocation dest)
+{
+    return createMessageBlockHelper(msgBlk, dest);
+}
+
+int PrintTransport::freeMessageBlock(MessageBlk* msgBlk, eMsgBlkLocation dest)
+{
+    return freeMessageBlockHelper(msgBlk, dest);
+}
+
 
 

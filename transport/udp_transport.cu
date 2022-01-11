@@ -1,7 +1,3 @@
-//
-// Created by alex on 7/16/20.
-//
-
 #include <cstdio>
 #include <arpa/inet.h>
 #include <iostream>
@@ -24,7 +20,7 @@ UdpTransport::UdpTransport(string localAddr, string mcastAddr, eTransportRole ro
         cerr << "ERROR UdpTransport - Failed to create socket " << errno << endl;
         exit(EXIT_FAILURE);
     }
-    cout << "Created local UDP socket: " << sockfd << endl;
+    DEBUG("Created local UDP socket: " << sockfd << endl);
 
     if(role == eTransportRole::SENSOR)
     {
@@ -100,44 +96,42 @@ UdpTransport::UdpTransport(string localAddr, string mcastAddr, eTransportRole ro
 
 }
 
-int UdpTransport::push(Message* m)
+int UdpTransport::push(MessageBlk* msgBlk, int numMsg)
 {
-    if(sendto(sockfd, (const char *)m->buffer, m->bufferSize,0,
-            (const struct sockaddr *) &this->g_mcastAddr,
-                    sizeof(this->g_mcastAddr)) <= 0)
-    {
-        cerr << "ERROR UdpTransport Push - failed sendto operation " << errno << endl;
-        close(sockfd);
-        exit(EXIT_FAILURE);
-    }
-    DEBUG("To " << inet_ntoa(g_mcastAddr.sin_addr) << endl);
-#ifdef DEBUG_BUILD
-    printMessage(m, 32);
+    for(int i = 0; i < numMsg; i++) {
+        if (sendto(sockfd, (const char *) msgBlk->messages[i].buffer, msgBlk->messages[i].bufferSize, 0,
+                   (const struct sockaddr *) &this->g_mcastAddr,
+                   sizeof(this->g_mcastAddr)) <= 0) {
+            cerr << "ERROR UdpTransport Push - failed sendto operation " << errno << endl;
+            close(sockfd);
+            exit(EXIT_FAILURE);
+        }
+        DEBUG("To " << inet_ntoa(g_mcastAddr.sin_addr) << endl);
+#if DEBUG_BUILD > 0
+        printMessage(&msgBlk->messages[i], 32);
 #endif
+    }
     return 0;
 }
 
-/*
-*  Pulls a message from the transport and places it in the buffer
-*/
-int UdpTransport::pop(Message** m, int numReqMsg, int& numRetMsg, eTransportDest dest)
+int UdpTransport::pop(MessageBlk* msgBlk, int numReqMsg, int& numRetMsg)
 {
     int rc;
-    sockaddr *name;
-    socklen_t *namelen;
+    sockaddr *name = NULL;
+    socklen_t *namelen = NULL;
     uint8_t buffer[MSG_MAX_SIZE];    // receive buffer
 
-    DEBUG("waiting on socket " << this->n_localPort << endl);
+    npt("waiting on socket %d\n",this->n_localPort);
 
     for(int i = 0; i < numReqMsg; i++)
     {
         rc = recvfrom(this->sockfd, &buffer, MSG_MAX_SIZE, 0, name, namelen);
 
         if (rc > 0) {
-            m[i]->seqNumber = i;
-            m[i]->interval = 0;
-            m[i]->bufferSize = rc;
-            memcpy(m[i]->buffer,buffer,rc); //TODO: smarter way than a copy?
+            msgBlk->messages[i].seqNumber = i;
+            msgBlk->messages[i].interval = 0;
+            msgBlk->messages[i].bufferSize = rc;
+            memcpy(msgBlk->messages[i].buffer,buffer,rc); //TODO: smarter way than a copy?
             numRetMsg = numRetMsg + 1;
         } else if(rc == -1) {
             cerr << "ERROR UdpTransport Pop - failed mcast socket read " << errno << endl;
@@ -151,15 +145,12 @@ int UdpTransport::pop(Message** m, int numReqMsg, int& numRetMsg, eTransportDest
     return 0;
 }
 
-Message* UdpTransport::createMessage() {
-    Message* m = NULL;
-    std::size_t t = sizeof(Message);
-    m = static_cast<Message*>(malloc(t));
-    return m;
+int UdpTransport::createMessageBlock(MessageBlk* msgBlk, eMsgBlkLocation dest)
+{
+    return createMessageBlockHelper(msgBlk, dest);
 }
 
-int UdpTransport::freeMessage(Message* m)
+int UdpTransport::freeMessageBlock(MessageBlk* msgBlk, eMsgBlkLocation dest)
 {
-    free(m);
-    return 0;
+    return freeMessageBlockHelper(msgBlk, dest);
 }

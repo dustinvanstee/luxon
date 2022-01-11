@@ -1,9 +1,5 @@
-//
-// Created by alex on 8/7/20.
-//
-
-#ifndef SENSORSIM_RDMA_UD_TRANSPORT_CUH
-#define SENSORSIM_RDMA_UD_TRANSPORT_CUH
+#ifndef LUXON_RDMA_UD_TRANSPORT_CUH
+#define LUXON_RDMA_UD_TRANSPORT_CUH
 
 #include <netinet/in.h>
 #include <unistd.h>
@@ -17,20 +13,18 @@
 
 #include "itransport.cuh"
 
-#define NUM_OPERATIONS  MSG_BLOCK_SIZE //Set this to same as the block size for other transports.
-
 class RdmaUdTransport: public ITransport {
 
 public:
     RdmaUdTransport(std::string localAddr, std::string mcastAddr, eTransportRole role);
     ~RdmaUdTransport();
 
+    int         push(MessageBlk* msgBlk, int numMsg) override;
+    int         pop(MessageBlk* msgBlk, int numReqMsg, int& numRetMsg) override;
+    int         createMessageBlock(MessageBlk* msgBlk, eMsgBlkLocation dest) override;
+    int         freeMessageBlock(MessageBlk* msgBlk, eMsgBlkLocation dest) override;
+
 private:
-    int         push(Message* msg);
-    int         pop(Message** msg, int numReqMsg, int& numRetMsg, eTransportDest dest);
-    Message*    createMessage();
-    int         freeMessage(Message* msg);
-    int         freeMsgBlock();
 
     struct rdma_event_channel*  g_CMEventChannel;
     struct rdma_cm_id*			g_CMId;
@@ -47,13 +41,10 @@ private:
     uint32_t 				    RemoteQpn;
     uint32_t 				    RemoteQkey;
 
-    uint8_t                     messagePool[MSG_BLOCK_SIZE * sizeof(Message)];
-    bool                        messagePoolSlotFree[MSG_BLOCK_SIZE];  //Track which slots in the message pool is available.
-    ibv_mr*                     mr_messagePool;
-
-    ibv_send_wr                 dataSendWqe;
-    ibv_recv_wr                 dataRcvWqe;
-    ibv_wc                      dataWc;
+    ibv_mr*                     mrMsgBlk;
+    ibv_send_wr                 sendWqe[MSG_BLOCK_SIZE];
+    ibv_recv_wr                 rcvWqe[MSG_BLOCK_SIZE];
+    ibv_wc                      cqe[MSG_BLOCK_SIZE];
 
 
     int         initSendWqe(ibv_send_wr*, int);
@@ -78,4 +69,4 @@ private:
     int         GetCMEvent(rdma_cm_event_type *EventType);
 };
 
-#endif //SENSORSIM_RDMA_UD_TRANSPORT_CUH
+#endif //LUXON_RDMA_UD_TRANSPORT_CUH
