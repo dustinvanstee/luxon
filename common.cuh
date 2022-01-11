@@ -7,7 +7,7 @@
 #include <chrono>
 #include <nvtx3/nvToolsExt.h>
 
-//#define DEBUG_BUILD 0 // just set to 0 or 1 , defined in Makefile
+#define DEBUG_BUILD 1 // just set to 0 or 1 
 
 #if DEBUG_BUILD > 0
     #define DEBUG(x) std::cerr << x
@@ -28,7 +28,7 @@
 #define PRINT_UPDATE_DELAY 1    //Used with timer
 
 #define MSG_MAX_SIZE 1500       //Max size of a message must be > RAND_FLOW_MSG_SIZE or max size message from pcap
-#define MSG_BLOCK_SIZE 1024     //Number of messages to process in parallel
+#define MSG_BLOCK_SIZE 4     //Number of messages to process in parallel
 
 #define CUDA_CHECK_LINE(a,file,line) { cudaError_t __cuer = a; if (cudaSuccess != __cuer) { ::fprintf (stderr, "[CUDA-ERRROR] @ %s:%d -- %d : %s -- running %s\n", file,line, __cuer, ::cudaGetErrorString(__cuer),#a) ; ::exit(__cuer) ; } }
 #define CUDA_CHECK(a) CUDA_CHECK_LINE(a,__FILE__,__LINE__)
