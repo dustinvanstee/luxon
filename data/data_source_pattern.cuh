@@ -8,7 +8,7 @@
 #include "../data/idataSource.cuh"
 
 #define PATTERN_CODE 0xAB              //Byte Pattern to Write
-#define PATTERN_BLOCK_SIZE 1776     //Size of the Data in a block
+#define PATTERN_BLOCK_SIZE 9000     //Size of the Data in a block
 
 struct patternBlock {
     char buffer[PATTERN_BLOCK_SIZE];

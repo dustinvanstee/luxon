@@ -430,8 +430,8 @@ int RdmaUdTransport::RDMACreateQP()
     //qp_init_attr.sq_sig_all = 0;
     qp_init_attr.send_cq = g_cq;
     qp_init_attr.recv_cq = g_cq;
-    qp_init_attr.cap.max_send_wr = 10*MSG_BLOCK_SIZE;
-    qp_init_attr.cap.max_recv_wr = 10*MSG_BLOCK_SIZE;
+    qp_init_attr.cap.max_send_wr = MSG_BLOCK_SIZE;
+    qp_init_attr.cap.max_recv_wr = MSG_BLOCK_SIZE;
     qp_init_attr.cap.max_send_sge = 1;
     qp_init_attr.cap.max_recv_sge = 1;
 
