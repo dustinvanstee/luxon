@@ -136,7 +136,7 @@ protected:
     int createMessageBlockHelper(MessageBlk* &msgBlk, eMsgBlkLocation dest) {
         npt("%s:", "TRACE\n");
         std::size_t msgSize = sizeof(Message);
-        msgBlk->msgCount = MSG_MAX_SIZE;
+        msgBlk->msgCount = MSG_BLOCK_SIZE;
         msgBlk->blockId = 0;
         msgBlk->memLocation = dest;
 
