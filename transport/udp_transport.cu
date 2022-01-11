@@ -107,9 +107,6 @@ int UdpTransport::push(MessageBlk* msgBlk, int numMsg)
             exit(EXIT_FAILURE);
         }
         DEBUG("To " << inet_ntoa(g_mcastAddr.sin_addr) << endl);
-#ifdef DEBUG_BUILD
-        printMessage(&msgBlk->messages[i], 32);
-#endif
     }
     return 0;
 }

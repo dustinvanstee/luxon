@@ -122,6 +122,8 @@ int RdmaUdTransport::push(MessageBlk* m, int numMsg)
         sendWqe[numMsg].next = NULL; //Stop sending after numMsgs.
     }
 
+    usleep(5000); //Wait 5 Seconds
+
     do {
         err = ibv_post_send(g_CMId->qp, sendWqe, &bad_wqe);
 
@@ -145,7 +147,7 @@ int RdmaUdTransport::push(MessageBlk* m, int numMsg)
             ret = ibv_poll_cq(g_cq, 1, &cqe[0]);
         } while (ret == 0);
         DEBUG("DEBUG: Received " << ret << " CQE Elements\n");
-        DEBUG("DEBUG: WRID(" << cqe.wr_id << ")\tStatus(" << cqe.status << ") length( " << cqe.byte_len
+        DEBUG("DEBUG: WRID(" << cqe[0].wr_id << ")\tStatus(" << cqe[0].status << ") length( " << cqe[0].byte_len
                              << ")\n");
 
         if (cqe[0].status == IBV_WC_RNR_RETRY_EXC_ERR) {
@@ -191,9 +193,9 @@ int RdmaUdTransport::pop(MessageBlk* msgBlk, int numReqMsg, int& numRetMsg)
 
         for (int j = 0; j < r; j++) {
             DEBUG ("test");
-            DEBUG("DEBUG: WRID(" << cqe.wr_id <<
-                                 ")\tStatus(" << cqe.status << ")" <<
-                                 ")\tSize(" << cqe.byte_len << ")\n");
+            DEBUG("DEBUG: WRID(" << cqe[j].wr_id <<
+                                 ")\tStatus(" << cqe[j].status << ")" <<
+                                 ")\tSize(" << cqe[j].byte_len << ")\n");
         }
 
         *msg->buffer += 40;
@@ -397,7 +399,7 @@ int RdmaUdTransport::RDMACreateQP()
 
     /*Create a completion Queue */
     //g_cq = ibv_create_cq(g_CMId->verbs, NUM_OPERATIONS, NULL, NULL, 0);
-    g_cq = ibv_create_cq(g_CMId->verbs, 5, NULL, NULL, 1);
+    g_cq = ibv_create_cq(g_CMId->verbs, MSG_BLOCK_SIZE, NULL, NULL, 1);
     if(!g_cq)
     {
         fprintf(stderr, "ERROR: RDMACreateQP - Couldn't create completion queue\n");
@@ -412,8 +414,8 @@ int RdmaUdTransport::RDMACreateQP()
     //qp_init_attr.sq_sig_all = 0;
     qp_init_attr.send_cq = g_cq;
     qp_init_attr.recv_cq = g_cq;
-    qp_init_attr.cap.max_send_wr = MSG_BLOCK_SIZE;
-    qp_init_attr.cap.max_recv_wr = MSG_BLOCK_SIZE;
+    qp_init_attr.cap.max_send_wr = 10*MSG_BLOCK_SIZE;
+    qp_init_attr.cap.max_recv_wr = 10*MSG_BLOCK_SIZE;
     qp_init_attr.cap.max_send_sge = 1;
     qp_init_attr.cap.max_recv_sge = 1;
 

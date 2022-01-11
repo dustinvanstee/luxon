@@ -1,23 +1,20 @@
-//
-// Created by alex on 7/15/20.
-//
-
 #include "Sensor.cuh"
 
-#include "../data/data_sample_finance.cuh"
-#include "../data/data_source_random.cuh"
 
 Sensor::Sensor(ITransport* t, eDataSourceType dst) {
     transport = t;
 
     switch(dst) {
-        case eDataSourceType::PCAP:
+        case eDataSourceType::PCAP :
             break;
         case eDataSourceType::RANDOM :
             dataSource = new RandomData();
             break;
         case eDataSourceType::FINANCE :
             dataSource = new MarketData();
+            break;
+        case eDataSourceType::PAT :
+            dataSource = new PatternData();
             break;
     }
 }
@@ -84,7 +81,7 @@ int Sensor::createRandomFlow(MessageBlk &mb, int numMsg) {
 
     RandomData* rd = (RandomData *) dataSource;
 
-    std::vector<block_t> updates = rd->createRandomUpdate(numMsg);
+    std::vector<randomBlock_t> updates = rd->createRandomUpdate(numMsg);
 
     transport->createMessageBlock(&mb, eMsgBlkLocation::HOST);
 
@@ -95,6 +92,32 @@ int Sensor::createRandomFlow(MessageBlk &mb, int numMsg) {
         mb.messages[i].interval = 100;
         mb.messages[i].bufferSize = min(MSG_MAX_SIZE, static_cast<int>(sizeof(block_t)));
         memcpy(& mb.messages[i].buffer, &block_t, min(MSG_MAX_SIZE, static_cast<int>(sizeof(block_t))));
+        i++;
+    }
+    mb.msgCount = i;
+    return 0;
+}
+
+int Sensor::createPatternFlow(MessageBlk &mb, int numMsg) {
+    mb.msgCount = 0;
+
+    if(dataSource->getType() != eDataSourceType::PAT) {
+        return -1;
+    }
+
+    PatternData* rd = (PatternData *) dataSource;
+
+    std::vector<patternBlock_t> updates = rd->createPatternUpdate(numMsg);
+
+    transport->createMessageBlock(&mb, eMsgBlkLocation::HOST);
+
+    int i = 0;
+    for (auto &patternBlock_t : updates)
+    {
+        mb.messages[i].seqNumber = i;
+        mb.messages[i].interval = 100;
+        mb.messages[i].bufferSize = min(MSG_MAX_SIZE, static_cast<int>(sizeof(patternBlock_t)));
+        memcpy(& mb.messages[i].buffer, &patternBlock_t, min(MSG_MAX_SIZE, static_cast<int>(sizeof(patternBlock_t))));
         i++;
     }
     mb.msgCount = i;

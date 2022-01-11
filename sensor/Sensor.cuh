@@ -7,7 +7,14 @@
 
 #include "../common.cuh"
 #include "../data/idataSource.cuh"
+#include "../data/data_sample_finance.cuh"
+#include "../data/data_source_random.cuh"
+#include "../data/data_source_pattern.cuh"
 #include "../transport/itransport.cuh"
+#include "../transport/print_transport.cuh"
+#include "../transport/none_transport.cuh"
+#include "../transport/udp_transport.cuh"
+#include "../transport/rdma_ud_transport.cuh"
 
 class Sensor {
 public:
@@ -15,6 +22,7 @@ public:
 
     //Flow Creation Functions
     int createRandomFlow(MessageBlk &mb, int numMsg);
+    int createPatternFlow(MessageBlk &mb, int numMsg);
     int createFinanceFlow(MessageBlk &mb, int numMsg);
     int createPCAPFlow(MessageBlk &mb, std::string fileName); //TODO: Need to create a data source class for pcap, this can solve overrun issue.
 
