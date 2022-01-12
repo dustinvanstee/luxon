@@ -122,7 +122,7 @@ int Processor::procCountZerosGPU(int minMessageToProcess) {
     CUDA_CHECK( cudaFree(blockSum));
 
     pt( "\n Processing Completed%c \n", ':');
-    std::cout << "\t processed " << processedMessages << " in " << t.usec_elapsed() << " usec" << std::endl;
+    std::cout << "\t processed " << processedMessages << " in " << t.millisec_elapsed() << " millisec" << std::endl;
     std::cout << "\t total zero's in messages = " << sum << std::endl;
     return 0;
 }
@@ -165,7 +165,7 @@ int Processor::procCountZerosCPU(int minMessageToProcess) {
     }
 
     std::cout << "\nProcessing Completed: " << std::endl;
-    std::cout << "\t processed " << processedMessages << " in " << t.usec_elapsed() << " usec" << std::endl;
+    std::cout << "\t processed " << processedMessages << " in " << t.millisec_elapsed() << " millisec" << std::endl;
     std::cout << "\t total zero's in messages = " << sum << std::endl;
     return 0;
 }
@@ -201,7 +201,7 @@ void Processor::procDropMsg(int minMessageToProcess) {
     t.stop();
 
     std::cout << "\nProcessing Completed: " << std::endl;
-    std::cout << "\t processed " << processedMessages << " in " << t.usec_elapsed() << " usec" << std::endl;
+    std::cout << "\t processed " << processedMessages << " in " << t.millisec_elapsed() << " millisec" << std::endl;
     exit(EXIT_SUCCESS);
 }
 

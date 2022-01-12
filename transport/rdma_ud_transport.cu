@@ -148,6 +148,7 @@ int RdmaUdTransport::push(MessageBlk* m, int numMsg)
 
     } while(err != 0);
 
+    int messaged_processed = 0;
     for(int i = 0; i < numMsg; i++) {
         //Wait For Completion
         int ret;
@@ -169,9 +170,9 @@ int RdmaUdTransport::push(MessageBlk* m, int numMsg)
             //std::cerr << "DEBUG: WRID(" << cqe.wr_id << ")\tStatus(" <<  cqe.status << ")" << std::endl;
             return -1;
         }
-
+        messaged_processed += ret;
     }
-
+    //pt("Processed %d messages\n", messaged_processed);
     return 0;
 }
 

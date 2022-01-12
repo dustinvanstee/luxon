@@ -56,7 +56,7 @@ public:
         return std::chrono::duration_cast<seconds>( stop_time - start_time ).count() ;
     }
 
-    unsigned long long usec_elapsed() const
+    unsigned long long millisec_elapsed() const
     {
         return std::chrono::duration_cast<std::chrono::milliseconds>( stop_time - start_time ).count() ;
     }

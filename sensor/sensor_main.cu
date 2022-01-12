@@ -135,9 +135,9 @@ int main(int argc,char *argv[], char *envp[]) {
         sentMessages += flowLength;
     } while (i++ < numIter);
     t_runTime.stop();
-    cerr << "\rSent " << sentMessages << " messages\t Time: " << t_runTime.usec_elapsed() << "usec"  << endl;
+    cerr << "\rSent " << sentMessages << " messages\t Time: " << t_runTime.millisec_elapsed() << " millisec"  << endl;
 
-    cerr << "Rate " << (sentMessages/t_runTime.usec_elapsed()) * 1000 << " Messages Per Second" << endl;
+    cerr << "Rate " << (sentMessages/t_runTime.millisec_elapsed()) * 1000 << " Messages Per Second" << endl;
 
 
     return 0;
