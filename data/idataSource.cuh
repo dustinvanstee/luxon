@@ -1,18 +1,12 @@
 #ifndef LUXON_IDATASOURCE_CUH
 #define LUXON_IDATASOURCE_CUH
 
-#include "../transport/itransport.cuh"
-
 enum class eDataSourceType {PCAP, RANDOM, FINANCE, PAT, UNKNOWN};
 
 class IDataSource {
 
 public:
 
-    /* Virtual Interface for Data buffer (TODO make it virtual at some point.  Finance implementation first)
-    */
-    void summarizeBuffer(Message *msgBlkPtr);
-    
     /*
     * Interface Statics
     */
@@ -41,6 +35,11 @@ public:
                 return "data source unknown";
         }
     }
+
+   /*
+   * Virtual Interface for Data buffer - print message represenation.
+   */
+    virtual void summarizeMessage(Message* m) = 0;
 
     /*
      * Accessor Methods

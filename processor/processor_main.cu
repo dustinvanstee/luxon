@@ -38,6 +38,8 @@ int main(int argc,char *argv[], char *envp[]) {
     char hostBuffer[256];
     string tmode = "UDP";
 
+
+    Processor* p;
     eTransportType transportType;
     ITransport* transport;
     IDataSource* dataSource;
@@ -104,31 +106,30 @@ int main(int argc,char *argv[], char *envp[]) {
             return -1;
     }
 
-    Processor p = Processor(transport, dataSourceType);
-
     if(mode == "PRINT")
     {
+        p = new Processor(transport, dataSourceType, eMsgBlkLocation::HOST);
         cout << "This processor will print " << MIN_MSG_TO_PRINT << " msg then exit" << endl;
-        p.procPrintMessages(MIN_MSG_TO_PRINT);
+        p->procPrintMessages(MIN_MSG_TO_PRINT);
     }
     else if(mode == "NO-PROC")
     {
+        p = new Processor(transport, dataSourceType, eMsgBlkLocation::HOST);
         cout << "This processor will receive " << MIN_MSG_TO_PROCESS << " msg it does no processing" << endl;
-        p.procDropMsg(MIN_MSG_TO_PROCESS);
+        p->procDropMsg(MIN_MSG_TO_PROCESS);
     }
     else if(mode == "CPU-COUNT")
     {
+        p = new Processor(transport, dataSourceType, eMsgBlkLocation::HOST);
         cout << "This processor will count zeros in " << MIN_MSG_TO_PROCESS << " msg using the CPU" << endl;
-        p.procCountZerosCPU(MIN_MSG_TO_PROCESS);
+        p->procCountZerosCPU(MIN_MSG_TO_PROCESS);
     }
     else if(mode == "GPU-COUNT")
     {
+        p = new Processor(transport, dataSourceType, eMsgBlkLocation::HOST); //TODO: This is not gpudirect rdmaing the data into the gpu for processing.
         cout << "This processor will count zeros in " << MIN_MSG_TO_PROCESS << " msg using the GPU" << endl;
-        p.procCountZerosGPU(MIN_MSG_TO_PROCESS);
+        p->procCountZerosGPU(MIN_MSG_TO_PROCESS);
     }
-
-    p.summarizeBuffer();
-    p.freeMemory();
 
     return 0;
 }

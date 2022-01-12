@@ -7,7 +7,7 @@
 #include <chrono>
 #include <nvtx3/nvToolsExt.h>
 
-#define DEBUG_BUILD 0 // just set to 0 or 1 
+#define DEBUG_BUILD 1 // just set to 0 or 1
 
 #if DEBUG_BUILD > 0
     #define DEBUG(x) std::cerr << x
@@ -27,7 +27,7 @@
 
 #define PRINT_UPDATE_DELAY 1    //Used with timer
 
-#define MSG_MAX_SIZE 4096        //Max size of a message must be > RAND_FLOW_MSG_SIZE or max size message from pcap
+#define MSG_MAX_SIZE 100        //Max size of a message must be > the maximum packet size from a data source or else the data sources message will be truncated.
 #define MSG_BLOCK_SIZE 8192      //Number of messages to process in parallel
 
 #define CUDA_CHECK_LINE(a,file,line) { cudaError_t __cuer = a; if (cudaSuccess != __cuer) { ::fprintf (stderr, "[CUDA-ERRROR] @ %s:%d -- %d : %s -- running %s\n", file,line, __cuer, ::cudaGetErrorString(__cuer),#a) ; ::exit(__cuer) ; } }

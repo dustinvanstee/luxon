@@ -6,6 +6,7 @@
 
 #include "../common.cuh"
 #include "../data/idataSource.cuh"
+#include "../transport/itransport.cuh"
 
 #define RAND_BLOCK_SIZE 9000     //Size of the Data in a random block
 #define RAND_BLOCK_COUNT 1024    //Number of Messages in the Flow
@@ -42,6 +43,11 @@ public:
             update.push_back(b);
         }
         return update;
+    }
+
+    void summarizeMessage(Message* m)
+    {
+        ITransport::printMessage(m, 25);
     }
 
 private:
