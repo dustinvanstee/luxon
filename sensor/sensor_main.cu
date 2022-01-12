@@ -6,12 +6,13 @@
 
 void PrintUsage()
 {
-    cout << "usage: sensorSim [ -s pcap ] [-t mode] [-l local-addr] [-d duration] mcast-addr" << endl;
-    cout << "\t multicast group where sensor publishes data" << endl;
-    cout << "\t[-s source] - a data source, can be PCAP, RANDOM, FINANCE (default: random byte pattern)" << endl;
-    cout << "\t[-t transport mode] - transport mode, PRINT, UDP, RDMA_UD, NONE (default: PRINT)" << endl;
-    cout << "\t[-i iterations] - iterations to send the flow. (default: 1 sec)" << endl;
-    cout << "\t[-l ip-addr] - local ip addresss to bind. (default: bind to first address)" << endl;
+    cout << "usage: sensorSim [ -s data_source] [-t transport_mode] [-d data_payload_size] [-n num_pkts] [-b msg_blk_size] [-l local-addr] mcast-addr" << endl;
+    cout << "\t mcast-addr         : multicast group where sensor publishes data (required argument)" << endl;
+    cout << "\t[-s data_source]    : a data source, can be PCAP, RANDOM, FINANCE, PAT (default: RANDOM)" << endl;
+    cout << "\t[-t transport mode] : transport mode, PRINT, UDP, RDMA_UD, NONE (default: PRINT)" << endl;
+    cout << "\t[-n num_pkts]       : Number of packets to send across the transport. (default:1024)" << endl;
+    cout << "\t[-b msg_blk_size]   : Number of messages in the message buffer. (default:1024)" << endl;
+    cout << "\t[-l ip-addr]        : local ip addresss to bind. (default: bind to first address)" << endl;
 }
 
 int main(int argc,char *argv[], char *envp[]) {
@@ -20,8 +21,8 @@ int main(int argc,char *argv[], char *envp[]) {
      */
     int op;
     string fileName;
-    eTransportType transportType;
-    eDataSourceType dataSourceType;
+    eTransportType transportType {eTransportType::PRINT};
+    eDataSourceType dataSourceType {eDataSourceType::RANDOM};
     string mcastAddr;
     string srcAddr;
     int numIter = 1;
@@ -29,8 +30,7 @@ int main(int argc,char *argv[], char *envp[]) {
     ITransport* transport;
     IDataSource* dataSource;
     
-    npt("test %d",0);
-    while ((op = getopt(argc, argv, "d:s:l:t:")) != -1) {
+    while ((op = getopt(argc, argv, "s:t:d:n:b:l:")) != -1) {
         switch (op) {
             case 'l':
                 srcAddr = optarg;
