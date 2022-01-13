@@ -46,6 +46,7 @@ int Sensor::createPCAPFlow(MessageBlk &mb, std::string fileName)
     double lastMsgUsec = 0, deltaUSec = 0;
     int i = 0;
     // TODO : add checker PCAP > msg_blk_size
+    // TODO : verify that you want milli or microseconds.
     while (int returnValue = pcap_next_ex(handle, &header, &data) >= 0) {
 
         // Set the size of the Message in bytes
