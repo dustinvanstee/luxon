@@ -1,9 +1,5 @@
-//
-// Created by alex on 7/15/20.
-//
-
-#ifndef SENSORSIM_PROCESSOR_CUH
-#define SENSORSIM_PROCESSOR_CUH
+#ifndef LUXON_PROCESSOR_CUH
+#define LUXON_PROCESSOR_CUH
 
 #include <unistd.h>
 #include <assert.h>
@@ -19,24 +15,23 @@ class Processor {
 public:
 
     // Constructor declaration
-    explicit Processor(ITransport *t, eDataSourceType dataSource);
+    explicit Processor(ITransport *t, eDataSourceType dataSource, eMsgBlkLocation msgBlockLocation );
+    ~Processor();
 
     //pop a message and process if you get one.
     int procPrintMessages(int minMsg);
     int procCountZerosCPU(int minMsg);
     int procCountZerosGPU(int minMsg);
     void procDropMsg(int i);
-    // Allocate memory based on device type
-    void initializeMsgBlk();
-    void summarizeBuffer();
-    int freeMemory();
 
 private:
     ITransport*  transport;
-    MessageBlk*  msgBlkPtr;
-    eDataSourceType dataSourceType; 
+    MessageBlk  msgBlk;
+    eDataSourceType dataSourceType;
+    IDataSource* dataSource;
+    eMsgBlkLocation msgBlockLocation;
 
 };
 
 
-#endif //SENSORSIM_PROCESSOR_CUH
+#endif //LUXON_PROCESSOR_CUH

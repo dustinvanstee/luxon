@@ -42,14 +42,16 @@ int RdmaUdTransport::createMessageBlock(MessageBlk* msgBlk, eMsgBlkLocation dest
         for(int i = 0; i < MSG_BLOCK_SIZE; i++)
         {
             initSendWqe(&sendWqe[i], i);
+            initRecvWqe(&rcvWqe[i], i);
             if(i == MSG_BLOCK_SIZE-1) { //There is no next block set to NULL
                 sendWqe[i].next = NULL;
+                rcvWqe[i].next = NULL;
             } else {
                 sendWqe[i].next = &sendWqe[i + 1];
+                rcvWqe[i].next = &rcvWqe[i + 1];
             }
-            updateSendWqe(&sendWqe[i], &msgBlk->messages[0], MSG_MAX_SIZE, mrMsgBlk);
-            initRecvWqe(&rcvWqe[i], i);
-            updateRecvWqe(&rcvWqe[i], &msgBlk->messages[0], MSG_MAX_SIZE, mrMsgBlk);
+            updateSendWqe(&sendWqe[i], &msgBlk->messages[i], MSG_MAX_SIZE, mrMsgBlk);
+            updateRecvWqe(&rcvWqe[i], &msgBlk->messages[i], MSG_MAX_SIZE, mrMsgBlk);
         }
 
     } else {
@@ -181,48 +183,47 @@ int RdmaUdTransport::push(MessageBlk* m, int numMsg)
 */
 
 // TODO : 121621 broke this due to code refactor for gpudirect
-int RdmaUdTransport::pop(MessageBlk* msgBlk, int numReqMsg, int& numRetMsg)
-{
-    numRetMsg = 0;
-    Message* msg = NULL;
+int RdmaUdTransport::pop(MessageBlk* msgBlk, int numReqMsg, int& numRetMsg) {
     npt("%s:", "TRACE\n");
+    int ret = 0;
+    struct ibv_recv_wr *bad_wqe = NULL;
+    numRetMsg = 0;
+
+    //Post the RcvWQE
+    //rcvWqe[0].next = NULL; //Testing take them one at a time.
+
+    ret = ibv_post_recv(g_CMId->qp, rcvWqe, &bad_wqe);
+    if(ret != 0)
+    {
+        fprintf(stderr, "ERROR: post_RECEIVE_WQE - Couldn't Post Receive WQE\n");
+        return -1;
+    }
 
     do {
-        //Post the RcvWQE
-        msg = reinterpret_cast<Message *>(&msgBlk[numRetMsg * sizeof(Message)]);
-        updateRecvWqe(&rcvWqe[numRetMsg], msgBlk->messages[numRetMsg].buffer, MSG_MAX_SIZE, mrMsgBlk);
-        post_RECEIVE_WQE(&rcvWqe[numRetMsg]);
-
-        int r;
         DEBUG("DEBUG: Waiting for CQE\n");
         do {
             //TODO: We should be pulling block size (1k) messages at a time
-            r = ibv_poll_cq(g_cq, 1, &cqe[0]);
-        } while (r == 0);
-        DEBUG("DEBUG: Received " << r << " CQE Elements\n");
+            ret = ibv_poll_cq(g_cq, numReqMsg, &cqe[0]);
+        } while (ret == 0);
+        DEBUG("DEBUG: Received " << ret << " CQE Elements\n");
 
-        numRetMsg += r;
+        numRetMsg += ret;
 
-        for (int j = 0; j < r; j++) {
-            DEBUG ("test");
-            //DEBUG("DEBUG: WRID(" << cqe.wr_id <<
-            //                     ")\tStatus(" << cqe.status << ")" <<
-            //                     ")\tSize(" << cqe.byte_len << ")\n");
-        }
+        //TODO: Not checking bad CQEs.
+        //DEBUG("DEBUG: WRID(" << cqe.wr_id <<
+        //                     ")\tStatus(" << cqe.status << ")" <<
+        //                     ")\tSize(" << cqe.byte_len << ")\n");
 
-        *msg->buffer += 40;
-        msg->bufferSize = cqe[0].byte_len - 40;
-        msg->seqNumber = numRetMsg-1;
-        msg->interval = 0;
+
+       // msg->buffer += 40;
+       // msg->bufferSize = cqe[0].byte_len - 40;
+       // msg->seqNumber = numRetMsg - 1;
+       // msg->interval = 0;
         //m[numRetMsg-1] = msg;
 
-        DEBUG ("DEBUG: Received Message:\n");
-        #ifdef DEBUG_BUILD
-        std::cerr<<"here";
-        ITransport::printMessage(msg, 48);
-        #endif
 
-    } while(numRetMsg < numReqMsg);
+
+    } while (numRetMsg < numReqMsg);
 
     return 0;
 }
@@ -282,24 +283,6 @@ int RdmaUdTransport::updateRecvWqe(ibv_recv_wr *wqe, void *buffer, size_t buffer
     wqe->sg_list->addr = (uintptr_t)buffer;
     wqe->sg_list->length = bufferlen;
     wqe->sg_list->lkey = bufferMemoryRegion->lkey;
-    return 0;
-}
-
-int RdmaUdTransport::post_RECEIVE_WQE(ibv_recv_wr* ll_wqe)
-{
-    npt("%s:", "TRACE\n");
-    DEBUG("DEBUG: Enter post_RECEIVE_WQE\n");
-    int ret;
-    struct ibv_recv_wr *bad_wqe = NULL;
-
-    ret = ibv_post_recv(g_CMId->qp, ll_wqe, &bad_wqe);
-    if(ret != 0)
-    {
-        fprintf(stderr, "ERROR: post_RECEIVE_WQE - Couldn't Post Receive WQE\n");
-        return -1;
-    }
-
-    DEBUG("DEBUG: Exit post_RECEIVE_WQE\n");
     return 0;
 }
 

@@ -22,7 +22,8 @@ public:
     int freeMessageBlock(MessageBlk* msgBlk, eMsgBlkLocation dest) override;
 
 private:
-
+    int push_counter = 0;
+    int pop_counter = 0;
 
 };
 

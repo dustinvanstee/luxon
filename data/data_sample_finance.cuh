@@ -1,9 +1,5 @@
-//
-// ChangeLog 
-//  121721 DV added random walk to finance instruments
-
-#ifndef LUXON_FINANCE_MSG_CUH
-#define LUXON_FINANCE_MSG_CUH
+#ifndef LUXON_DATA_SOURCE_FINANCE_CUH
+#define LUXON_DATA_SOURCE_FINANCE_CUH
 
 #include <vector>
 #include <iostream>
@@ -82,19 +78,13 @@ public:
         return update;
     }
 
-    void summarizeBuffer(MessageBlk *msgBlkPtr){
-        pt("Final MessageBlk Summary %s", ITransport::toString(msgBlkPtr).c_str());
-        // TODO Print out First N rows formatted in buffer!
+    void summarizeMessage(Message* m) {
         // 1. cast the data, and print
-        for(int i =0; i<5;i++) {
-            //uint8_t xx = msgBlkPtr->messages->buffer[i];
-            //Instrument ins = reinterpret_cast<Instrument>(msgBlkPtr->messages->buffer);
-            Instrument *ins = new(Instrument);
-            Message* ptr;
-            ptr = &msgBlkPtr->messages[i];
-            memcpy(ins, ptr->buffer, sizeof(Instrument)); 
-            pt("Ins:%d, %s %s %f\n", i, ins->symbol, ins->exchange, ins->bid);
-        }
+        Instrument *ins = new(Instrument);
+        memcpy(ins, m->buffer, sizeof(Instrument));
+        //std::fprintf(std::cerr, "Instument: %s %s %d", ins->symbol, ins->exchange, ins->bid);
+        std::cerr <<  "Instrument: " << ins->symbol << ins->exchange << ins->bid << std::endl;
+        //TODO: Not formating correctly, Dustin can you get it how oyu want it.
     }
 
 
@@ -104,4 +94,4 @@ private:
 };
 
 
-#endif //LUXON_FINANCE_MSG_CUH
+#endif //LUXON_DATA_SOURCE_FINANCE_CUH
