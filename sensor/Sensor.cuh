@@ -21,9 +21,9 @@ public:
     Sensor(ITransport*, eDataSourceType); // Constructor declaration
 
     //Flow Creation Functions
-    int createRandomFlow(MessageBlk &mb, int numMsg);
-    int createPatternFlow(MessageBlk &mb, int numMsg);
-    int createFinanceFlow(MessageBlk &mb, int numMsg);
+    int createRandomFlow(MessageBlk &mb, int msg_blk_size);
+    int createPatternFlow(MessageBlk &mb, int msg_blk_size);
+    int createFinanceFlow(MessageBlk &mb, int msg_blk_size);
     int createPCAPFlow(MessageBlk &mb, std::string fileName); //TODO: Need to create a data source class for pcap, this can solve overrun issue.
 
     int getFlowByteLength(MessageBlk &mb);                    //Length of the flow in Bytes

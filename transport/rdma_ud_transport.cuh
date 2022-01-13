@@ -19,7 +19,7 @@ public:
     RdmaUdTransport(std::string localAddr, std::string mcastAddr, eTransportRole role);
     ~RdmaUdTransport();
 
-    int         push(MessageBlk* msgBlk, int numMsg) override;
+    int         push(MessageBlk* msgBlk) override;
     int         pop(MessageBlk* msgBlk, int numReqMsg, int& numRetMsg) override;
     int         createMessageBlock(MessageBlk* msgBlk, eMsgBlkLocation dest) override;
     int         freeMessageBlock(MessageBlk* msgBlk, eMsgBlkLocation dest) override;
@@ -42,9 +42,9 @@ private:
     uint32_t 				    RemoteQkey;
 
     ibv_mr*                     mrMsgBlk;
-    ibv_send_wr                 sendWqe[MSG_BLOCK_SIZE];
-    ibv_recv_wr                 rcvWqe[MSG_BLOCK_SIZE];
-    ibv_wc                      cqe[MSG_BLOCK_SIZE];
+    ibv_send_wr                 sendWqe[MSG_BLOCK_SIZE_STATIC_OVERALLOC]; // TODO : Fix static overallocation later !! 
+    ibv_recv_wr                 rcvWqe[MSG_BLOCK_SIZE_STATIC_OVERALLOC];
+    ibv_wc                      cqe[MSG_BLOCK_SIZE_STATIC_OVERALLOC];
 
 
     int         initSendWqe(ibv_send_wr*, int);

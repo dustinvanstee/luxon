@@ -33,10 +33,10 @@ public:
     }// Constructor declaration
 
     //Creates a random set of updates for the market data instruments, and puts them in a flow for sending.
-    std::vector<randomBlock_t> createRandomUpdate(int numMsg)
+    std::vector<randomBlock_t> createRandomUpdate(int msg_blk_size)
     {
         std::vector<randomBlock_t> update;
-        for(int j = 0; j < numMsg; j++)
+        for(int j = 0; j < msg_blk_size; j++)
         {
             randomBlock_t b = randomBlocks[(uint8_t)(rand()%RAND_BLOCK_COUNT)];
             update.push_back(b);

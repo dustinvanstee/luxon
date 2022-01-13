@@ -25,9 +25,9 @@ public:
         }
     }// Constructor declaration
 
-    std::vector<patternBlock_t> createPatternUpdate(int numMsg) {
+    std::vector<patternBlock_t> createPatternUpdate(int msg_blk_size) {
         std::vector <patternBlock_t> update;
-        for (int j = 0; j < numMsg; j++) {
+        for (int j = 0; j < msg_blk_size; j++) {
             update.push_back(patternBlock);
         }
         return update;

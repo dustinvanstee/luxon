@@ -6,13 +6,14 @@
 
 void PrintUsage()
 {
-    cout << "usage: sensorSim [ -s data_source] [-t transport_mode] [-d data_payload_size] [-n num_pkts] [-b msg_blk_size] [-l local-addr] mcast-addr" << endl;
-    cout << "\t mcast-addr         : multicast group where sensor publishes data (required argument)" << endl;
-    cout << "\t[-s data_source]    : a data source, can be PCAP, RANDOM, FINANCE, PAT (default: RANDOM)" << endl;
-    cout << "\t[-t transport mode] : transport mode, PRINT, UDP, RDMA_UD, NONE (default: PRINT)" << endl;
-    cout << "\t[-n num_pkts]       : Number of packets to send across the transport. (default:1024)" << endl;
-    cout << "\t[-b msg_blk_size]   : Number of messages in the message buffer. (default:1024)" << endl;
-    cout << "\t[-l ip-addr]        : local ip addresss to bind. (default: bind to first address)" << endl;
+    cout << "usage: sensorSim [ -s data_source] [-t transport_mode] [-d msg_payload_size] [-n num_pkts] [-b msg_blk_size] [-l local-addr] mcast-addr" << endl;
+    cout << "\t mcast-addr            : multicast group where sensor publishes data (required argument)" << endl;
+    cout << "\t[-s data_source]       : a data source, can be PCAP, RANDOM, FINANCE, PAT (default: RANDOM)" << endl;
+    cout << "\t[-t transport mode]    : transport mode, PRINT, UDP, RDMA_UD, NONE (default: PRINT)" << endl;
+    cout << "\t[-d msg_payload_size]  : size of the individual messages in the message buffer array (default : 100Bytes)" << endl;
+    cout << "\t[-n num_pkts]          : Number of packets to send across the transport. (default:1024)" << endl;
+    cout << "\t[-b msg_blk_size]      : Number of messages in the message buffer. (default:1024)" << endl;
+    cout << "\t[-l ip-addr]           : local ip addresss to bind. (default: bind to first address)" << endl;
 }
 
 int main(int argc,char *argv[], char *envp[]) {
@@ -25,16 +26,16 @@ int main(int argc,char *argv[], char *envp[]) {
     eDataSourceType dataSourceType {eDataSourceType::RANDOM};
     string mcastAddr;
     string srcAddr;
-    int numIter = 1;
     char hostBuffer[256];
     ITransport* transport;
     IDataSource* dataSource;
+    int msg_payload_size = 100; //bytes
+    int num_pkts = 1024;        // number of individual message packets to send.
+    int msg_blk_size= 1024;     // number of individual message packets in a message block.
+
     
     while ((op = getopt(argc, argv, "s:t:d:n:b:l:")) != -1) {
         switch (op) {
-            case 'l':
-                srcAddr = optarg;
-                break;
             case 's':
                 dataSourceType = dataSource->strToDataSourceType(optarg);
                 break;
@@ -42,7 +43,16 @@ int main(int argc,char *argv[], char *envp[]) {
                 transportType = transport->strToTransportType(optarg);
                 break;
             case 'd':
-                numIter = atoi(optarg);
+                msg_payload_size = atoi(optarg);
+                break;
+            case 'n':
+                num_pkts = atoi(optarg);
+                break;
+            case 'b':
+                msg_blk_size = atoi(optarg);
+                break;
+            case 'l':
+                srcAddr = optarg;
                 break;
             default:
                 PrintUsage();
@@ -100,13 +110,13 @@ int main(int argc,char *argv[], char *envp[]) {
             s.createPCAPFlow(msgBlk, fileName);
             break;
         case eDataSourceType::RANDOM:
-            s.createRandomFlow(msgBlk, MSG_BLOCK_SIZE);
+            s.createRandomFlow(msgBlk, msg_blk_size);
             break;
         case eDataSourceType::PAT:
-            s.createPatternFlow(msgBlk, MSG_BLOCK_SIZE);
+            s.createPatternFlow(msgBlk, msg_blk_size);
             break;
         case eDataSourceType::FINANCE:
-            s.createFinanceFlow(msgBlk, MSG_BLOCK_SIZE);
+            s.createFinanceFlow(msgBlk, msg_blk_size);
             break;
         default :
             cout << "No valid data source" << endl;
@@ -124,6 +134,8 @@ int main(int argc,char *argv[], char *envp[]) {
 
     timer t_runTime;
 
+    int num_iters = (int) math.ceil(float(num_pkts) / float(msg_blk_size));
+    pt("Running %d Loop Iterations\n")
     int i = 1; //First Iteration
     t_runTime.start();
     do {
@@ -133,7 +145,7 @@ int main(int argc,char *argv[], char *envp[]) {
             return -1;
         }
         sentMessages += flowLength;
-    } while (i++ < numIter);
+    } while (i++ < num_iters);
     t_runTime.stop();
     cerr << "\rSent " << sentMessages << " messages\t Time: " << t_runTime.usec_elapsed() << "usec"  << endl;
 

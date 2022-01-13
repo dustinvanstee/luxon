@@ -62,13 +62,13 @@ public:
     }; // Constructor declaration
 
     //Creates a random set of updates for the market data instruments, and puts them in a flow for sending.
-    std::vector<instrument> createRandomUpdate(int numMsg)
+    std::vector<instrument> createRandomUpdate(int msg_blk_size)
     {
         std::vector<instrument> update;
         std::default_random_engine generator;
         std::normal_distribution<double> distribution(0.0,1.0);
-        npt("Adding %d messages in Random Update\n", numMsg);
-        for(int j = 0; j < numMsg; j++)
+        npt("Adding %d messages in Random Update\n", msg_blk_size);
+        for(int j = 0; j < msg_blk_size; j++)
         {
             instrument i = marketData[(uint8_t)(rand()%this->numInstruments)];
             double dS = mu * i.bid * dt + sigma * i.bid * distribution(generator) * sqrt(dt);

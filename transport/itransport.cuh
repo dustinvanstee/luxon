@@ -19,8 +19,9 @@ typedef struct
 
 typedef struct
 {
-    int blockId; //used to map to other resources maintained by the transport.
-    int msgCount;
+    int blockId;    // used to map to other resources maintained by the transport.
+    int msgCount;   // used as internal counter to m
+    int msgBlkSize; // set one time at startup.  this could be a class of its own with a constructor
     eMsgBlkLocation memLocation;
     Message* messages;
 } MessageBlk;
@@ -33,7 +34,7 @@ public:
     /*
      * Interface Methods
      */
-    virtual int push(MessageBlk* msgBlk, int numMsg) = 0;
+    virtual int push(MessageBlk* msgBlk) = 0;
     virtual int pop(MessageBlk* msgBlk, int numReqMsg, int& numRetMsg) = 0;
     virtual int createMessageBlock(MessageBlk* msgBlk, eMsgBlkLocation dest) = 0;
     virtual int freeMessageBlock(MessageBlk* msgBlk, eMsgBlkLocation dest) = 0;
@@ -141,13 +142,13 @@ protected:
         msgBlk->memLocation = dest;
 
         if (dest == eMsgBlkLocation::HOST) {
-            msgBlk->messages = static_cast<Message *>(malloc(msgSize * MSG_BLOCK_SIZE));
+            msgBlk->messages = static_cast<Message *>(malloc(msgSize * msgBlk->msgBlkSize));
         } else {
             //TODO : add code for device selection
-            CUDA_CHECK(cudaMallocManaged((void **) &msgBlk->messages, msgSize * MSG_BLOCK_SIZE));
+            CUDA_CHECK(cudaMallocManaged((void **) &msgBlk->messages, msgSize * msgBlk->msgBlkSize));
         }
 
-        for (int i = 0; i < MSG_BLOCK_SIZE; i++) {
+        for (int i = 0; i < msgBlk->msgBlkSize; i++) {
             msgBlk->messages[i].seqNumber = i;
             msgBlk->messages[i].interval = 0;
             msgBlk->messages[i].bufferSize = MSG_MAX_SIZE;

@@ -36,13 +36,13 @@ int RdmaUdTransport::createMessageBlock(MessageBlk* msgBlk, eMsgBlkLocation dest
         }
 
         //Register this new message block for RDMA access
-        mrMsgBlk = create_MEMORY_REGION(msgBlk->messages, (sizeof(Message) * MSG_BLOCK_SIZE));
+        mrMsgBlk = create_MEMORY_REGION(msgBlk->messages, (sizeof(Message) * msgBlk->msgBlkSize));
 
         //Create Match Set of QP work elements.
-        for(int i = 0; i < MSG_BLOCK_SIZE; i++)
+        for(int i = 0; i < msgBlk->msgBlkSize; i++)
         {
             initSendWqe(&sendWqe[i], i);
-            if(i == MSG_BLOCK_SIZE-1) { //There is no next block set to NULL
+            if(i == msgBlk->msgBlkSize-1) { //There is no next block set to NULL
                 sendWqe[i].next = NULL;
             } else {
                 sendWqe[i].next = &sendWqe[i + 1];
@@ -117,16 +117,16 @@ RdmaUdTransport::~RdmaUdTransport() {
     ibv_dereg_mr(mrMsgBlk);
 }
 
-int RdmaUdTransport::push(MessageBlk* m, int numMsg)
+int RdmaUdTransport::push(MessageBlk* m)
 {
     npt("%s:", "TRACE\n");
     int err;
     int ret = 0;
     struct ibv_send_wr *bad_wqe = NULL;
 
-    if(numMsg < MSG_BLOCK_SIZE)
+    if(m->msgBlkSize < MSG_BLOCK_SIZE_STATIC_OVERALLOC)
     {
-        sendWqe[numMsg].next = NULL; //Stop sending after numMsgs.
+        sendWqe[m->msgBlkSize].next = NULL; //Stop sending after msg_blk_sizes.
     }
 
     do {
@@ -148,7 +148,7 @@ int RdmaUdTransport::push(MessageBlk* m, int numMsg)
 
     } while(err != 0);
 
-    for(int i = 0; i < numMsg; i++) {
+    for(int i = 0; i < msg_blk_size; i++) {
         //Wait For Completion
         int ret;
 
@@ -415,7 +415,7 @@ int RdmaUdTransport::RDMACreateQP()
 
     /*Create a completion Queue */
     //g_cq = ibv_create_cq(g_CMId->verbs, NUM_OPERATIONS, NULL, NULL, 0);
-    g_cq = ibv_create_cq(g_CMId->verbs, MSG_BLOCK_SIZE, NULL, NULL, 1);
+    g_cq = ibv_create_cq(g_CMId->verbs, MSG_BLOCK_SIZE_STATIC_OVERALLOC, NULL, NULL, 1);
     if(!g_cq)
     {
         fprintf(stderr, "ERROR: RDMACreateQP - Couldn't create completion queue\n");
@@ -430,8 +430,8 @@ int RdmaUdTransport::RDMACreateQP()
     //qp_init_attr.sq_sig_all = 0;
     qp_init_attr.send_cq = g_cq;
     qp_init_attr.recv_cq = g_cq;
-    qp_init_attr.cap.max_send_wr = MSG_BLOCK_SIZE;
-    qp_init_attr.cap.max_recv_wr = MSG_BLOCK_SIZE;
+    qp_init_attr.cap.max_send_wr = MSG_BLOCK_SIZE_STATIC_OVERALLOC;
+    qp_init_attr.cap.max_recv_wr = MSG_BLOCK_SIZE_STATIC_OVERALLOC;
     qp_init_attr.cap.max_send_sge = 1;
     qp_init_attr.cap.max_recv_sge = 1;
 

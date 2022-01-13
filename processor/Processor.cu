@@ -83,17 +83,17 @@ int Processor::procCountZerosGPU(int minMessageToProcess) {
     this->initializeMsgBlk();
 
     int* blockSum;   //Array with sum of zeros for this message
-    size_t sumArraySize = MSG_BLOCK_SIZE * sizeof(int);
+    size_t sumArraySize = MSG_BLOCK_SIZE_STATIC_OVERALLOC * sizeof(int);
     CUDA_CHECK( cudaMallocManaged(&blockSum, sumArraySize));
    // cout << "Processing on GPU using " <<  numberOfBlocks << " blocks with " << threadsPerBlock << " threads per block" << endl;
     t.start();
     while (processedMessages < minMessageToProcess) {
 
-        if (0 != transport->pop(msgBlkPtr, MSG_BLOCK_SIZE, msgCountReturned)) {
+        if (0 != transport->pop(msgBlkPtr, MSG_BLOCK_SIZE_STATIC_OVERALLOC, msgCountReturned)) {
             exit(EXIT_FAILURE);
         }
 
-        CUDA_CHECK(cudaMemPrefetchAsync(this->msgBlkPtr->messages, MSG_BLOCK_SIZE*sizeof(Message), deviceId));
+        CUDA_CHECK(cudaMemPrefetchAsync(this->msgBlkPtr->messages, MSG_BLOCK_SIZE_STATIC_OVERALLOC*sizeof(Message), deviceId));
 
         if(msgCountReturned > 0) //If there are new messages process them
         {
@@ -144,7 +144,7 @@ int Processor::procCountZerosCPU(int minMessageToProcess) {
     t.start();
     while (processedMessages < minMessageToProcess) {
 
-        if (0 != transport->pop(pmsgBlk, MSG_BLOCK_SIZE, msgCountReturned)) {
+        if (0 != transport->pop(pmsgBlk, MSG_BLOCK_SIZE_STATIC_OVERALLOC, msgCountReturned)) {
             exit(EXIT_FAILURE);
         }
 
@@ -159,7 +159,7 @@ int Processor::procCountZerosCPU(int minMessageToProcess) {
     }
     t.stop();
     //Free the receive buffer
-    for(int i = 0; i < MSG_BLOCK_SIZE; i++)
+    for(int i = 0; i < MSG_BLOCK_SIZE_STATIC_OVERALLOC; i++)
     {
         transport->freeMessageBlock(pmsgBlk,eMsgBlkLocation::HOST) ;
     }
@@ -186,7 +186,7 @@ void Processor::procDropMsg(int minMessageToProcess) {
     t.start();
     while (processedMessages < minMessageToProcess) {
 
-        if (0 != transport->pop(pmsgBlk, MSG_BLOCK_SIZE, msgCountReturned)) {
+        if (0 != transport->pop(pmsgBlk, MSG_BLOCK_SIZE_STATIC_OVERALLOC, msgCountReturned)) {
             exit(EXIT_FAILURE);
         }
 
@@ -218,7 +218,7 @@ int Processor::procPrintMessages(int minMessageToProcess) {
 
     do {
 
-        if (0 != transport->pop(pmsgBlk, MSG_BLOCK_SIZE, messagesReturned)) {
+        if (0 != transport->pop(pmsgBlk, MSG_BLOCK_SIZE_STATIC_OVERALLOC, messagesReturned)) {
             exit(EXIT_FAILURE);
         }
 

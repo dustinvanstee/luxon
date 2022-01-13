@@ -16,7 +16,7 @@ class UdpTransport: public ITransport {
 public:
     UdpTransport(string localAddr, string mcastAddr, eTransportRole role);
 
-    int push(MessageBlk* msgBlk, int numMsg) override;
+    int push(MessageBlk* msgBlk, int msg_blk_size) override;
     int pop(MessageBlk* msgBlk, int numReqMsg, int& numRetMsg) override;
     int createMessageBlock(MessageBlk* msgBlk, eMsgBlkLocation dest) override;
     int freeMessageBlock(MessageBlk* msgBlk, eMsgBlkLocation dest)override;

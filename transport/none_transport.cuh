@@ -16,7 +16,7 @@ class NoneTransport: public ITransport {
 public:
     NoneTransport();
 
-    int push(MessageBlk* msgBlk, int numMsg) override;
+    int push(MessageBlk* msgBlk) override;
     int pop(MessageBlk* msgBlk, int numReqMsg, int& numRetMsg) override;
     int createMessageBlock(MessageBlk* msgBlk, eMsgBlkLocation dest) override;
     int freeMessageBlock(MessageBlk* msgBlk, eMsgBlkLocation dest) override;
