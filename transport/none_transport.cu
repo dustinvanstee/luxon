@@ -11,13 +11,13 @@ NoneTransport::NoneTransport()
 
 int NoneTransport::push(MessageBlk* m, int numMsg)
 {
-    int i = 0; //Some stuff to avoid getting this whole stack call optimized out.
-    i++;
+    push_counter++;
     return 0;
 }
 
 int NoneTransport::pop(MessageBlk* m, int numReqMsg, int& numRetMsg)
 {
+    pop_counter++;
     return 0;
 }
 

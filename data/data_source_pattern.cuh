@@ -6,6 +6,7 @@
 
 #include "../common.cuh"
 #include "../data/idataSource.cuh"
+#include "../transport/itransport.cuh"
 
 #define PATTERN_CODE 0xAB              //Byte Pattern to Write
 #define PATTERN_BLOCK_SIZE 9000     //Size of the Data in a block
@@ -31,6 +32,11 @@ public:
             update.push_back(patternBlock);
         }
         return update;
+    }
+
+    void summarizeMessage(Message* m)
+    {
+        ITransport::printMessage(m, 25);
     }
 
 private:

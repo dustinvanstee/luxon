@@ -33,7 +33,7 @@ lib/rdma_ud_transport.o: transport/rdma_ud_transport.cu transport/itransport.cuh
 # $@ is the name of target:wildcard
 # $^ filename of all prerequisites
 bin/processor-debug: lib/libtransport.a processor/processor_main.cu processor/Processor.cu $(DHEADERS)
-	$(CXXCUDA) -rdc=true -g -o bin/processor-debug processor/Processor.cu processor/processor_main.cu lib/libtransport.a  $(LIBS)
+	$(CXXCUDA) -g -o bin/processor-debug processor/Processor.cu processor/processor_main.cu lib/libtransport.a  $(LIBS)
 
 bin/sensor-debug: lib/libtransport.a sensor/sensor_main.cu sensor/Sensor.cu $(DHEADERS)
 	$(CXXCUDA) -g -o bin/sensor-debug sensor/sensor_main.cu sensor/Sensor.cu lib/libtransport.a $(LIBS)
