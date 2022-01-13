@@ -12,7 +12,7 @@
 
 
 #define MIN_MSG_TO_PRINT    100
-#define MIN_MSG_TO_PROCESS  1'000'000  //CPU count our GPU count
+#define MIN_MSG_TO_PROCESS  10'000'000  //CPU count or GPU count
 //#define MIN_MSG_TO_PROCESS  1'048'576  //CPU count our GPU count
 //#define MIN_MSG_TO_PROCESS  1'024  //CPU count our GPU count
 
@@ -88,7 +88,7 @@ int main(int argc,char *argv[], char *envp[]) {
     cout << "Local Address: " << (localAddr.empty() ? "Default" : localAddr) << endl;
     cout << "Mcast Group Address: " << mcastAddr << endl;
     cout << "Processor Mode: " << mode << endl;
-    cout << "Transport Mode: " << tmode << endl;
+    cout << "Transport Mode: " << ITransport::TransportTypeToStr(transportType) << endl;
     cout << "Data Source   : " << IDataSource::DataSourceTypeToStr(dataSourceType) << endl;
 
 
@@ -126,7 +126,7 @@ int main(int argc,char *argv[], char *envp[]) {
     }
     else if(mode == "GPU-COUNT")
     {
-        p = new Processor(transport, dataSourceType, eMsgBlkLocation::HOST); //TODO: This is not gpudirect rdmaing the data into the gpu for processing.
+        p = new Processor(transport, dataSourceType, eMsgBlkLocation::DEVICE); //TODO: This is not gpudirect rdmaing the data into the gpu for processing.
         cout << "This processor will count zeros in " << MIN_MSG_TO_PROCESS << " msg using the GPU" << endl;
         p->procCountZerosGPU(MIN_MSG_TO_PROCESS);
     }

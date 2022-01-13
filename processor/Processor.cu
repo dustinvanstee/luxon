@@ -110,7 +110,7 @@ int Processor::procCountZerosGPU(int minMessageToProcess) {
             exit(EXIT_FAILURE);
         }
 
-       CUDA_CHECK(cudaMemPrefetchAsync(&msgBlk.messages, MSG_BLOCK_SIZE * sizeof(Message), deviceId));
+       CUDA_CHECK(cudaMemPrefetchAsync(msgBlk.messages, MSG_BLOCK_SIZE * sizeof(Message), deviceId));
 
         if (msgCountReturned > 0) //If there are new messages process them
         {
@@ -139,6 +139,7 @@ int Processor::procCountZerosGPU(int minMessageToProcess) {
 
     pt("\n Processing Completed%c \n", ':');
     std::cout << "\t processed " << processedMessages << " in " << t.usec_elapsed() << " usec" << std::endl;
+    std::cout << "Processing Rate " << (processedMessages/t.usec_elapsed()) * 1000 << " Messages Per Second" << std::endl;
     std::cout << "\t total zero's in messages = " << sum << std::endl;
 
     return 0;
@@ -171,7 +172,8 @@ int Processor::procCountZerosCPU(int minMessageToProcess) {
 
 
     std::cout << "\nProcessing Completed: " << std::endl;
-    std::cout << "\t processed " << processedMessages << " in " << t.usec_elapsed() << " usec" << std::endl;
+    std::cout << "\t received and processed " << processedMessages << " in " << t.usec_elapsed() << " usec" << std::endl;
+    std::cout << "Processing Rate " << (processedMessages/t.usec_elapsed()) * 1000 << " Messages Per Second" << std::endl;
     std::cout << "\t total zero's in messages = " << sum << std::endl;
     return 0;
 }
@@ -200,7 +202,8 @@ void Processor::procDropMsg(int minMessageToProcess) {
     t.stop();
 
     std::cout << "\nProcessing Completed: " << std::endl;
-    std::cout << "\t processed " << processedMessages << " in " << t.usec_elapsed() << " usec" << std::endl;
+    std::cout << "\t received and processed " << processedMessages << " in " << t.usec_elapsed() << " usec" << std::endl;
+    std::cout << "Processing Rate " << (processedMessages/t.usec_elapsed()) * 1000 << " Messages Per Second" << std::endl;
     exit(EXIT_SUCCESS);
 }
 
@@ -219,9 +222,13 @@ int Processor::procPrintMessages(int minMessageToProcess) {
         std::cout << "Printing first bytes of " << min(messagesReturned,minMessageToProcess) << " messages" << std::endl;
         for(int i = 0; i<min(messagesReturned,minMessageToProcess); i++)
         {
-            transport->printMessage(&msgBlk.messages[i], 32);
+            transport->printMessage(&msgBlk.messages[i], 64);
             std::cout << std::endl;
-            this->dataSource->summarizeMessage(&msgBlk.messages[i]);
+            if(dataSource != NULL)
+            {
+                this->dataSource->summarizeMessage(&msgBlk.messages[i]);
+            }
+
         }
     } while (processedCount < minMessageToProcess);
 

@@ -53,9 +53,6 @@ private:
     int         initRecvWqe(ibv_recv_wr *wqe, int);
     int         updateRecvWqe(ibv_recv_wr* wqe, void *buffer, size_t bufferlen, ibv_mr *bufferMemoryRegion);
 
-    int         post_SEND_WQE(ibv_send_wr*);
-    int         post_RECEIVE_WQE(ibv_recv_wr*);
-
     ibv_mr*     create_MEMORY_REGION(void* , size_t);
 
     int         RDMACreateQP();

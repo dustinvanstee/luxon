@@ -81,7 +81,7 @@ public:
     void summarizeMessage(Message* m) {
         // 1. cast the data, and print
         Instrument *ins = new(Instrument);
-        memcpy(ins, m, sizeof(Instrument));
+        memcpy(ins, m->buffer, sizeof(Instrument));
         //std::fprintf(std::cerr, "Instument: %s %s %d", ins->symbol, ins->exchange, ins->bid);
         std::cerr <<  "Instrument: " << ins->symbol << ins->exchange << ins->bid << std::endl;
         //TODO: Not formating correctly, Dustin can you get it how oyu want it.

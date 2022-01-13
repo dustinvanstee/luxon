@@ -3,7 +3,7 @@
 
 #include <netinet/in.h>
 
-#define DEFAULT_PATTERN 0xFEED
+#define DEFAULT_PATTERN 0xFF
 
 enum class eMsgBlkLocation {HOST, DEVICE};
 enum class eTransportType {UDP, RDMA_UD, PRINT, NONE, UNKNOWN};
