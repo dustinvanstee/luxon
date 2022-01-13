@@ -16,7 +16,7 @@ class PrintTransport: public ITransport {
 public:
     PrintTransport();
 
-    int push(MessageBlk* msgBlk, int msg_blk_size) override;
+    int push(MessageBlk* msgBlk) override;
     int pop(MessageBlk* msgBlk, int numReqMsg, int& numRetMsg) override;
     int createMessageBlock(MessageBlk* msgBlk, eMsgBlkLocation dest) override;
     int freeMessageBlock(MessageBlk* msgBlk, eMsgBlkLocation dest) override;

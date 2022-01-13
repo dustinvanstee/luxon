@@ -1,7 +1,7 @@
 #include <iostream>
 #include <unistd.h>
 #include <chrono>
-
+#include "math.h"
 #include "Sensor.cuh"
 
 void PrintUsage()
@@ -110,13 +110,13 @@ int main(int argc,char *argv[], char *envp[]) {
             s.createPCAPFlow(msgBlk, fileName);
             break;
         case eDataSourceType::RANDOM:
-            s.createRandomFlow(msgBlk, msg_blk_size);
+            s.createRandomFlow(msgBlk);
             break;
         case eDataSourceType::PAT:
-            s.createPatternFlow(msgBlk, msg_blk_size);
+            s.createPatternFlow(msgBlk);
             break;
         case eDataSourceType::FINANCE:
-            s.createFinanceFlow(msgBlk, msg_blk_size);
+            s.createFinanceFlow(msgBlk);
             break;
         default :
             cout << "No valid data source" << endl;
@@ -126,16 +126,15 @@ int main(int argc,char *argv[], char *envp[]) {
     npt("Sensor Statistics %c", ':');
     cout << "Sensor Flow has " << s.getFlowMsgCount(msgBlk) << " messages w/ avg size " << s.getFlowMsgAvgSize(msgBlk) << endl;
     cout << "Sensor Flow total size is " << s.getFlowByteLength(msgBlk) << " bytes " << endl;
-    cout << "sending flow for " << numIter << " iterations" << endl;
-    cout << "sending " << numIter * s.getFlowMsgCount(msgBlk) << " messages" << endl;
 
     long long sentMessages = 0;
     int flowLength = s.getFlowMsgCount(msgBlk);
 
     timer t_runTime;
 
-    int num_iters = (int) math.ceil(float(num_pkts) / float(msg_blk_size));
-    pt("Running %d Loop Iterations\n")
+    int num_iters = (int) ceil(float(num_pkts) / float(msg_blk_size));
+    pt("Sensor Flow sending %d individual message packets in chunks of %d\n", num_pkts, msg_blk_size);
+    pt("Sensor Flow will send %d Message Blocks\n", num_iters);
     int i = 1; //First Iteration
     t_runTime.start();
     do {

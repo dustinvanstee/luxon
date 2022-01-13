@@ -96,9 +96,9 @@ UdpTransport::UdpTransport(string localAddr, string mcastAddr, eTransportRole ro
 
 }
 
-int UdpTransport::push(MessageBlk* msgBlk, int msg_blk_size)
+int UdpTransport::push(MessageBlk* msgBlk)
 {
-    for(int i = 0; i < msg_blk_size; i++) {
+    for(int i = 0; i < msgBlk->msgBlkSize; i++) {
         if (sendto(sockfd, (const char *) msgBlk->messages[i].buffer, msgBlk->messages[i].bufferSize, 0,
                    (const struct sockaddr *) &this->g_mcastAddr,
                    sizeof(this->g_mcastAddr)) <= 0) {

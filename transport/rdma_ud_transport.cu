@@ -148,7 +148,7 @@ int RdmaUdTransport::push(MessageBlk* m)
 
     } while(err != 0);
 
-    for(int i = 0; i < msg_blk_size; i++) {
+    for(int i = 0; i < m->msgBlkSize; i++) {
         //Wait For Completion
         int ret;
 

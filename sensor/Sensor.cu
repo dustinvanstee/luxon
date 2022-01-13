@@ -98,7 +98,7 @@ int Sensor::createRandomFlow(MessageBlk &mb) {
     return 0;
 }
 
-int Sensor::createPatternFlow(MessageBlk &mb, int msg_blk_size) {
+int Sensor::createPatternFlow(MessageBlk &mb) {
     mb.msgCount = 0;
 
     if(dataSource->getType() != eDataSourceType::PAT) {
@@ -107,7 +107,7 @@ int Sensor::createPatternFlow(MessageBlk &mb, int msg_blk_size) {
 
     PatternData* rd = (PatternData *) dataSource;
 
-    std::vector<patternBlock_t> updates = rd->createPatternUpdate(msg_blk_size);
+    std::vector<patternBlock_t> updates = rd->createPatternUpdate(mb.msgBlkSize);
 
     transport->createMessageBlock(&mb, eMsgBlkLocation::HOST);
 
@@ -124,7 +124,7 @@ int Sensor::createPatternFlow(MessageBlk &mb, int msg_blk_size) {
     return 0;
 }
 
-int Sensor::createFinanceFlow(MessageBlk &mb, int msg_blk_size) {
+int Sensor::createFinanceFlow(MessageBlk &mb) {
 
     mb.msgCount = 0;
 
@@ -133,7 +133,7 @@ int Sensor::createFinanceFlow(MessageBlk &mb, int msg_blk_size) {
     }
     MarketData* md = (MarketData *) dataSource;
 
-    std::vector<instrument> updates = md->createRandomUpdate(msg_blk_size);
+    std::vector<instrument> updates = md->createRandomUpdate(mb.msgBlkSize);
 
     transport->createMessageBlock(&mb, eMsgBlkLocation::HOST);
 
@@ -182,7 +182,7 @@ int Sensor::getFlowMsgAvgSize(MessageBlk &mb) {
 }
 
 int Sensor::sendFlow(MessageBlk &mb) {
-    if (0 != transport->push(&mb, mb.msgCount)) {
+    if (0 != transport->push(&mb)) {
         return -1;
     }
     return 0;
