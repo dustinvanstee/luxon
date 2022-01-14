@@ -1,5 +1,6 @@
 #ifndef LUXON_IDATASOURCE_CUH
 #define LUXON_IDATASOURCE_CUH
+#include "../transport/itransport.cuh"
 
 enum class eDataSourceType {PCAP, RANDOM, FINANCE, PAT, UNKNOWN};
 

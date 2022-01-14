@@ -28,7 +28,7 @@
 #define PRINT_UPDATE_DELAY 1    //Used with timer
 
 #define MSG_MAX_SIZE 8192        //Max size of a message must be > the maximum packet size from a data source or else the data sources message will be truncated.
-#define MSG_BLOCK_SIZE 8192      //Number of messages to process in parallel
+#define MSG_BLOCK_SIZE 1024      //Number of messages to process in parallel
 
 #define CUDA_CHECK_LINE(a,file,line) { cudaError_t __cuer = a; if (cudaSuccess != __cuer) { ::fprintf (stderr, "[CUDA-ERRROR] @ %s:%d -- %d : %s -- running %s\n", file,line, __cuer, ::cudaGetErrorString(__cuer),#a) ; ::exit(__cuer) ; } }
 #define CUDA_CHECK(a) CUDA_CHECK_LINE(a,__FILE__,__LINE__)

@@ -12,7 +12,7 @@
 
 
 #define MIN_MSG_TO_PRINT    100
-#define MIN_MSG_TO_PROCESS  10'000'000  //CPU count or GPU count
+#define MIN_MSG_TO_PROCESS  1'000'000  //CPU count or GPU count
 //#define MIN_MSG_TO_PROCESS  1'048'576  //CPU count our GPU count
 //#define MIN_MSG_TO_PROCESS  1'024  //CPU count our GPU count
 
